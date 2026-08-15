@@ -1,0 +1,114 @@
+{
+  "dataset_id": "comperbench_abt_buy",
+  "display_name": "CompERBench abt-buy",
+  "status": "provisionally_selected",
+  "role_in_project": "secondary_mvp_dataset",
+  "official_source": {
+    "homepage": "https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/",
+    "train_url": "https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/data/abt-buy/gs_train.csv",
+    "validation_url": "https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/data/abt-buy/gs_val.csv",
+    "test_url": "https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/data/abt-buy/gs_test.csv",
+    "records_url": "https://data.dws.informatik.uni-mannheim.de/benchmarkmatchingtasks/data/abt-buy/records.zip"
+  },
+  "local_paths": {
+    "train_pairs": "data/raw/comperbench_abt_buy/gs_train.csv",
+    "validation_pairs": "data/raw/comperbench_abt_buy/gs_val.csv",
+    "test_pairs": "data/raw/comperbench_abt_buy/gs_test.csv",
+    "records_zip": "data/raw/comperbench_abt_buy/records.zip",
+    "abt_records": "data/raw/comperbench_abt_buy/records/record_descriptions/1_abt.csv",
+    "buy_records": "data/raw/comperbench_abt_buy/records/record_descriptions/2_buy.csv"
+  },
+  "file_format": {
+    "pair_files": "csv",
+    "record_files": "csv",
+    "records_container": "zip"
+  },
+  "splits": {
+    "train": "gs_train.csv",
+    "validation": "gs_val.csv",
+    "test": "gs_test.csv"
+  },
+  "schema": {
+    "pair_columns": ["source_id", "target_id", "matching"],
+    "source_record_id": "subject_id",
+    "target_record_id": "subject_id",
+    "label": "matching",
+    "left_record_file": "1_abt.csv",
+    "right_record_file": "2_buy.csv",
+    "left_text_fields": ["name", "description"],
+    "right_text_fields": ["name", "description", "manufacturer"],
+    "left_structured_fields": ["price"],
+    "right_structured_fields": ["price"]
+  },
+  "label_mapping": {
+    "True": "match",
+    "False": "non_match"
+  },
+  "audited_counts": {
+    "records": {
+      "abt_records": 1081,
+      "buy_records": 1092
+    },
+    "train": {
+      "total_pairs": 5010,
+      "matches": 764,
+      "non_matches": 4246
+    },
+    "validation": {
+      "total_pairs": 1439,
+      "matches": 220,
+      "non_matches": 1219
+    },
+    "test": {
+      "total_pairs": 710,
+      "matches": 109,
+      "non_matches": 601
+    }
+  },
+  "split_overlap_audit": {
+    "train_validation_duplicate_pairs": 2,
+    "train_test_duplicate_pairs": 1,
+    "validation_test_duplicate_pairs": 0,
+    "source_train_validation_overlap": 555,
+    "source_train_test_overlap": 381,
+    "target_train_validation_overlap": 647,
+    "target_train_test_overlap": 441,
+    "duplicate_pairs": [
+      {
+        "splits": "train_validation",
+        "source_id": "23246",
+        "target_id": "90146847",
+        "matching": "True"
+      },
+      {
+        "splits": "train_validation",
+        "source_id": "23097",
+        "target_id": "202515446",
+        "matching": "False"
+      },
+      {
+        "splits": "train_test",
+        "source_id": "32625",
+        "target_id": "201935171",
+        "matching": "False"
+      }
+    ]
+  },
+  "supported_research_questions": {
+    "rq1_class_ratio": true,
+    "rq2_unseen_entity_shift": false,
+    "rq3_hard_negative_sampling": "limited"
+  },
+  "usage_notes": [
+    "Use abt-buy for early ingestion, class-ratio experiments, baseline smoke tests, and feature validation.",
+    "Do not use the official abt-buy split for unseen-entity claims.",
+    "Treat official split results carefully because local inspection found duplicate pairs across splits."
+  ],
+  "known_limitations": [
+    "Official split is not pair-disjoint.",
+    "Official split is not entity-disjoint.",
+    "No explicit entity or cluster ID exists beyond source_id and target_id.",
+    "Hard-negative labels are not provided; any hard-negative experiment requires a project-defined sampling rule."
+  ]
+}
+

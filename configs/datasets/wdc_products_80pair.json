@@ -1,0 +1,105 @@
+{
+  "dataset_id": "wdc_products_80pair",
+  "display_name": "WDC Products 80pair",
+  "status": "provisionally_selected",
+  "role_in_project": "primary_mvp_dataset",
+  "official_source": {
+    "homepage": "https://webdatacommons.org/largescaleproductcorpus/wdc-products/index.html",
+    "download_url": "https://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/wdc-products/80pair.zip",
+    "sample_url": "https://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/wdc-products/sample_pairwise.json"
+  },
+  "local_paths": {
+    "raw_zip": "data/raw/wdc_products_sample/80pair.zip",
+    "sample_pairwise": "data/raw/wdc_products_sample/sample_pairwise.json",
+    "extracted_dir": "data/raw/wdc_products_sample/80pair"
+  },
+  "file_format": {
+    "container": "zip",
+    "records": "jsonl_gzip",
+    "read_hint": "pd.read_json(path, compression='gzip', lines=True)"
+  },
+  "splits": {
+    "train_small": "wdcproducts80cc20rnd000un_train_small.json.gz",
+    "valid_small": "wdcproducts80cc20rnd000un_valid_small.json.gz",
+    "test_seen_000un": "wdcproducts80cc20rnd000un_gs.json.gz",
+    "test_mixed_050un": "wdcproducts80cc20rnd050un_gs.json.gz",
+    "test_unseen_100un": "wdcproducts80cc20rnd100un_gs.json.gz"
+  },
+  "schema": {
+    "pair_id": "pair_id",
+    "label": "label",
+    "hard_negative": "is_hard_negative",
+    "left_record_id": "id_left",
+    "right_record_id": "id_right",
+    "left_entity_id": "cluster_id_left",
+    "right_entity_id": "cluster_id_right",
+    "left_text_fields": ["brand_left", "title_left", "description_left"],
+    "right_text_fields": ["brand_right", "title_right", "description_right"],
+    "left_structured_fields": ["price_left", "priceCurrency_left"],
+    "right_structured_fields": ["price_right", "priceCurrency_right"]
+  },
+  "label_mapping": {
+    "1": "match",
+    "0": "non_match"
+  },
+  "audited_counts": {
+    "train_small": {
+      "total_pairs": 2500,
+      "matches": 500,
+      "non_matches": 2000,
+      "hard_negatives": 1000,
+      "not_hard_negatives": 1500
+    },
+    "valid_small": {
+      "total_pairs": 2500,
+      "matches": 500,
+      "non_matches": 2000,
+      "hard_negatives": 1000,
+      "not_hard_negatives": 1500
+    },
+    "test_seen_000un": {
+      "total_pairs": 4500,
+      "matches": 500,
+      "non_matches": 4000,
+      "hard_negatives": 3000,
+      "not_hard_negatives": 1500,
+      "cluster_overlap_with_train_small": 500,
+      "record_id_overlap_with_train_small": 0
+    },
+    "test_mixed_050un": {
+      "total_pairs": 4500,
+      "matches": 500,
+      "non_matches": 4000,
+      "hard_negatives": 3000,
+      "not_hard_negatives": 1500,
+      "cluster_overlap_with_train_small": 250,
+      "record_id_overlap_with_train_small": 110
+    },
+    "test_unseen_100un": {
+      "total_pairs": 4500,
+      "matches": 500,
+      "non_matches": 4000,
+      "hard_negatives": 3000,
+      "not_hard_negatives": 1500,
+      "cluster_overlap_with_train_small": 0,
+      "record_id_overlap_with_train_small": 0
+    }
+  },
+  "supported_research_questions": {
+    "rq1_class_ratio": true,
+    "rq2_unseen_entity_shift": true,
+    "rq3_hard_negative_sampling": true
+  },
+  "usage_notes": [
+    "Use WDC Products as the primary dataset for unseen-entity and hard-negative claims.",
+    "Use cluster_id_left and cluster_id_right for entity-level leakage checks.",
+    "Use test_unseen_100un for strict unseen-entity evaluation relative to train_small.",
+    "Interpret test_mixed_050un as an official mixed benchmark variant, not as a strict record-disjoint custom split."
+  ],
+  "known_limitations": [
+    "Only the 80pair benchmark variant has been downloaded and inspected so far.",
+    "The experiment protocol is still draft and not locked.",
+    "Missing-value handling has not been audited yet."
+  ]
+}
+

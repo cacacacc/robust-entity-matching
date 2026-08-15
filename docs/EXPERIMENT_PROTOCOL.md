@@ -24,6 +24,20 @@ Current strong candidates:
 
 Large WDC LSPM corpus files are out of scope for the initial MVP download.
 
+Dataset choice is still not locked because local schema inspection has not been completed.
+Schema inspection update:
+
+- WDC Products `80pair` is suitable as the primary MVP dataset.
+- CompERBench `abt-buy` is suitable as a secondary small benchmark and smoke-test dataset.
+- `abt-buy` official split is not pair-disjoint and not entity-disjoint, so it must not be used for unseen-entity claims.
+
+Initial dataset configuration files:
+
+- `configs/datasets/wdc_products_80pair.json`
+- `configs/datasets/comperbench_abt_buy.json`
+
+These configs record local paths, source URLs, schema fields, label mappings, audited counts, supported research questions, and known limitations. They are inputs for Phase 2 ingestion code, not final locked experiment configs.
+
 ## Splits
 
 Planned split protocols:
@@ -34,6 +48,10 @@ Planned split protocols:
 Exact train, validation, and test proportions are not locked yet.
 
 WDC Products may be evaluated using its official seen, half-seen, and unseen benchmark splits. CompERBench tasks require further schema inspection before deciding whether entity-disjoint splits are possible.
+
+Do not claim CompERBench supports entity-disjoint splitting until actual record/entity fields have been inspected.
+
+Local inspection found duplicate pairs and substantial source/target ID overlap across `abt-buy` official train/validation/test splits. Therefore `abt-buy` should be treated as a fixed-split baseline dataset only unless a custom split is later designed and validated.
 
 ## Random Seeds
 

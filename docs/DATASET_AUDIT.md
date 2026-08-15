@@ -209,3 +209,303 @@ RQ3：可能适合，但 hard-negative 需要自己定义。
 - 文件大小是否低于 500MB；
 - license 和引用要求。
 
+## 2026-08-15：小型文件 schema 检查尝试
+
+### 本次目标
+
+本次原计划检查 WDC Products 的官方 sample pair-wise JSON，以及 CompERBench `abt-buy` 的 `gs_train.csv` 和 `records.zip`，目的是确认实际文件 schema，而不是运行实验。
+
+### 已确认的官方页面信息
+
+#### WDC Products
+
+官方页面说明 WDC Products 文件使用 JSON Lines 格式，可以用如下方式读取：
+
+```python
+import pandas as pd
+df = pd.read_json("file_name.json.gz", compression="gzip", lines=True)
+```
+
+官方页面说明 pair-wise 文件中每一行表示一对 offers。每个 offer-specific attribute 会出现两次，分别带 `_left` 和 `_right` 后缀。
+
+官方页面确认 pair-wise 文件包含：
+
+- `label`
+- `pair_id`
+- `is_hard_negative`
+- 左右两侧 offer attributes，例如 title、description、price、priceCurrency、brand 等；
+- 与实体或产品相关的标识字段，例如 `cluster_id` 的左右版本。
+
+官方页面还确认：
+
+- WDC Products 严格分离 training、validation 和 test 中出现的 records；
+- benchmark 具有 seen / unseen products 维度；
+- pair-wise test sets 每个包含 4,500 pairs；
+- pair-wise benchmark zip 文件约 20MB 到 21.6MB，低于 500MB。
+
+#### CompERBench `abt-buy`
+
+官方页面确认 `abt-buy` 提供：
+
+- `gs_train.csv`，约 107KB；
+- `gs_val.csv`，约 31KB；
+- `gs_test.csv`，约 16KB；
+- `feature_vector.zip`，约 850KB；
+- `records.zip`，约 125KB。
+
+官方页面说明 CompERBench 提供固定 train、validation 和 test sets，并提供 feature vectors 和 source records。
+
+官方页面还说明其 baseline feature creation 包括：
+
+- Levenshtein；
+- token-level Jaccard；
+- Jaccard with inner Levenshtein；
+- exact；
+- containment；
+- TF-IDF cosine similarity；
+- numeric absolute difference。
+
+### 当前阻塞
+
+实际下载小型 schema 文件时被审批系统拒绝，原因是用户此前明确要求“暂时不要下载数据”；仅回复“继续”不足以明确撤销该限制。
+
+因此本回合没有下载任何数据文件，也没有检查本地实际 CSV/JSON 列名。
+
+### 当前结论
+
+可以确认：
+
+- WDC Products 是强候选数据集；
+- CompERBench `abt-buy` 是很小的可审计候选任务；
+- 两者的文件规模都适合本地 schema 审计；
+- 但在没有实际文件列名之前，不能最终锁定 data contract。
+
+不能确认：
+
+- CompERBench `abt-buy` 的 `gs_train.csv` 具体列名；
+- `records.zip` 内部文件名和字段；
+- CompERBench 是否直接支持严格 entity-disjoint split；
+- WDC Products 具体 sample 文件中的所有列名和缺失值情况。
+
+### 下一步需要的授权
+
+如果继续 Phase 1 schema 审计，需要明确允许下载以下小型公开文件：
+
+- WDC Products 官方 sample 或 20MB 级 pair-wise benchmark zip；
+- CompERBench `abt-buy` 的 `gs_train.csv`、`gs_val.csv`、`gs_test.csv` 和 `records.zip`。
+
+这些文件都低于 500MB，不涉及训练、不涉及上传、不涉及付费 API。
+
+## 2026-08-15：本地 schema 审计结果
+
+用户已明确允许下载小型公开数据文件用于 Phase 1 schema 审计，单个文件不超过 500MB。本次只下载和解压小型公开文件，不训练模型，不上传数据，不推送 GitHub。
+
+### 下载文件
+
+#### WDC Products
+
+下载位置：
+
+- `data/raw/wdc_products_sample/sample_pairwise.json`
+- `data/raw/wdc_products_sample/wdc_products_index.html`
+- `data/raw/wdc_products_sample/80pair.zip`
+- `data/raw/wdc_products_sample/80pair/`
+
+文件大小：
+
+- `sample_pairwise.json`：约 55KB；
+- `80pair.zip`：约 21.0MB。
+
+注意：最初尝试过一个错误 URL，返回的是 HTML 页面而不是 JSON。后续从 WDC Products 官方页面源码定位到真实 sample URL：
+
+https://data.dws.informatik.uni-mannheim.de/largescaleproductcorpus/data/wdc-products/sample_pairwise.json
+
+#### CompERBench `abt-buy`
+
+下载位置：
+
+- `data/raw/comperbench_abt_buy/gs_train.csv`
+- `data/raw/comperbench_abt_buy/gs_val.csv`
+- `data/raw/comperbench_abt_buy/gs_test.csv`
+- `data/raw/comperbench_abt_buy/records.zip`
+- `data/raw/comperbench_abt_buy/records/`
+
+文件大小：
+
+- `gs_train.csv`：109,056 bytes；
+- `gs_val.csv`：31,329 bytes；
+- `gs_test.csv`：15,481 bytes；
+- `records.zip`：127,521 bytes。
+
+这些文件都被 `.gitignore` 排除，不会提交到 Git。
+
+### WDC Products schema
+
+`sample_pairwise.json` 和 `80pair.zip` 中的 pair-wise JSON Lines 文件字段一致：
+
+- `id_left`
+- `brand_left`
+- `title_left`
+- `description_left`
+- `price_left`
+- `priceCurrency_left`
+- `cluster_id_left`
+- `id_right`
+- `brand_right`
+- `title_right`
+- `description_right`
+- `price_right`
+- `priceCurrency_right`
+- `cluster_id_right`
+- `pair_id`
+- `label`
+- `is_hard_negative`
+
+`label` 使用整数：
+
+- `1`：match；
+- `0`：non-match。
+
+`is_hard_negative` 使用布尔值：
+
+- `true`：hard negative；
+- `false`：not hard negative。
+
+`cluster_id_left` 和 `cluster_id_right` 可以用于实体层面的 seen/unseen 检查。
+
+### WDC Products 80pair split 结构
+
+`80pair.zip` 包含：
+
+- `wdcproducts80cc20rnd000un_train_small.json.gz`
+- `wdcproducts80cc20rnd000un_train_medium.json.gz`
+- `wdcproducts80cc20rnd000un_train_large.json.gz`
+- `wdcproducts80cc20rnd000un_valid_small.json.gz`
+- `wdcproducts80cc20rnd000un_valid_medium.json.gz`
+- `wdcproducts80cc20rnd000un_valid_large.json.gz`
+- `wdcproducts80cc20rnd000un_gs.json.gz`
+- `wdcproducts80cc20rnd050un_gs.json.gz`
+- `wdcproducts80cc20rnd100un_gs.json.gz`
+
+本次重点检查 small split 和三个 gold-standard test files：
+
+| File | Total pairs | Match | Non-match | Hard negative | Not hard negative |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `wdcproducts80cc20rnd000un_train_small.json.gz` | 2,500 | 500 | 2,000 | 1,000 | 1,500 |
+| `wdcproducts80cc20rnd000un_valid_small.json.gz` | 2,500 | 500 | 2,000 | 1,000 | 1,500 |
+| `wdcproducts80cc20rnd000un_gs.json.gz` | 4,500 | 500 | 4,000 | 3,000 | 1,500 |
+| `wdcproducts80cc20rnd050un_gs.json.gz` | 4,500 | 500 | 4,000 | 3,000 | 1,500 |
+| `wdcproducts80cc20rnd100un_gs.json.gz` | 4,500 | 500 | 4,000 | 3,000 | 1,500 |
+
+Pair overlap check:
+
+- train vs valid pair overlap：0；
+- train vs 000un gold-standard pair overlap：0；
+- valid vs 000un gold-standard pair overlap：0。
+
+Entity / record overlap check against `train_small`:
+
+| Test file | Cluster overlap with train | Record ID overlap with train | Test clusters | Test record IDs |
+| --- | ---: | ---: | ---: | ---: |
+| `000un_gs` | 500 | 0 | 500 | 1,000 |
+| `050un_gs` | 250 | 110 | 500 | 1,000 |
+| `100un_gs` | 0 | 0 | 500 | 1,000 |
+
+Interpretation:
+
+- `000un_gs` behaves as fully seen at entity level relative to `train_small` because all 500 test clusters overlap with train clusters.
+- `100un_gs` behaves as fully unseen at entity level relative to `train_small` because no test cluster overlaps with train clusters.
+- `050un_gs` is mixed by design and has partial entity overlap. It also shows some record ID overlap with `train_small`, so it must be used carefully and interpreted as an official benchmark variant rather than a strict record-disjoint custom split.
+
+### CompERBench `abt-buy` schema
+
+Gold-standard pair files:
+
+- `gs_train.csv`
+- `gs_val.csv`
+- `gs_test.csv`
+
+Columns:
+
+- `source_id`
+- `target_id`
+- `matching`
+
+`matching` uses strings:
+
+- `True`：match；
+- `False`：non-match。
+
+Source records:
+
+- `record_descriptions/1_abt.csv`
+- `record_descriptions/2_buy.csv`
+
+`1_abt.csv` columns:
+
+- `subject_id`
+- `name`
+- `description`
+- `price`
+
+`2_buy.csv` columns:
+
+- `subject_id`
+- `name`
+- `description`
+- `manufacturer`
+- `price`
+
+Record counts:
+
+- Abt source records：1,081；
+- Buy source records：1,092。
+
+Pair counts:
+
+| Split | Total pairs | Match | Non-match |
+| --- | ---: | ---: | ---: |
+| train | 5,010 | 764 | 4,246 |
+| validation | 1,439 | 220 | 1,219 |
+| test | 710 | 109 | 601 |
+
+### CompERBench `abt-buy` split overlap findings
+
+Pair overlap:
+
+- train vs validation：2 duplicate pairs；
+- train vs test：1 duplicate pair；
+- validation vs test：0 duplicate pairs。
+
+Duplicate pairs found:
+
+- train/validation duplicate match：`source_id=23246`, `target_id=90146847`, `matching=True`;
+- train/validation duplicate non-match：`source_id=23097`, `target_id=202515446`, `matching=False`;
+- train/test duplicate non-match：`source_id=32625`, `target_id=201935171`, `matching=False`.
+
+Entity / record ID overlap:
+
+- source train/validation overlap：555 unique source IDs；
+- source train/test overlap：381 unique source IDs；
+- target train/validation overlap：647 unique target IDs；
+- target train/test overlap：441 unique target IDs。
+
+Interpretation:
+
+The official `abt-buy` split is useful for a small fixed-split baseline and class-ratio experiments, but it is not pair-disjoint due to three duplicate pairs across splits and is clearly not entity-disjoint. It should not be used to claim unseen-entity generalization.
+
+### Updated MVP dataset recommendation
+
+Initial MVP dataset choices:
+
+1. WDC Products `80pair` benchmark as the primary dataset for RQ2 and RQ3.
+2. CompERBench `abt-buy` as the secondary small benchmark for RQ1 and baseline pipeline smoke tests.
+
+Rationale:
+
+- WDC Products has explicit `cluster_id`, `label`, `pair_id`, and `is_hard_negative`, and official seen/unseen variants.
+- `abt-buy` is small, easy to inspect, and suitable for early pipeline development, but its official split has leakage-like overlap and cannot support strict unseen-entity claims.
+
+Open decision:
+
+- Whether to include a third CompERBench product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, after the first ingestion pipeline works.

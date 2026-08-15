@@ -17,6 +17,12 @@ Phase 1: Literature and Dataset Audit.
 - Updated `docs/LITERATURE_NOTES.md` with source-grounded notes on class ratio and unseen-entity evaluation.
 - Updated `docs/DATASET_AUDIT.md` with initial dataset suitability notes for WDC Products, CompERBench, and WDC LSPM.
 - Updated `docs/EXPERIMENT_PROTOCOL.md` with audit-derived draft constraints.
+- User explicitly approved downloading small public files for Phase 1 schema audit, with each file under 500MB.
+- Downloaded and inspected WDC Products `sample_pairwise.json` and `80pair.zip`.
+- Downloaded and inspected CompERBench `abt-buy` train/validation/test labels and records.
+- Found WDC Products `80pair` has suitable fields for labels, pair IDs, cluster IDs, and hard-negative flags.
+- Found CompERBench `abt-buy` is small and useful, but its official split has duplicate pairs and substantial source/target ID overlap across splits.
+- Created initial dataset configuration files for WDC Products `80pair` and CompERBench `abt-buy`.
 
 ## Verification Results
 
@@ -34,15 +40,16 @@ Phase 1: Literature and Dataset Audit.
 ## Current Issues
 
 - No Python environment has been created yet.
-- No datasets, code, tests, or experiments have been added yet.
-- Dataset selection is not locked yet.
-- No data files have been downloaded yet.
-- WDC Products appears strongly aligned with RQ2 and RQ3, but actual file schema still needs local inspection.
-- CompERBench appears useful for RQ1 and baseline experiments, but entity ID support still needs local inspection.
+- No ingestion code, tests, or experiments have been added yet.
+- Dataset choice is now provisionally selected but not protocol-locked.
+- Local raw audit files have been downloaded under `data/raw/`; they are intentionally ignored by Git.
+- CompERBench `abt-buy` must not be used for unseen-entity claims under its official split.
+- A third product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, remains optional after the first ingestion pipeline works.
+- Dataset configs are created, but no loader has validated them programmatically yet.
 
 ## Next Milestone
 
-Phase 1 next milestone: inspect small sample or benchmark files for WDC Products and one CompERBench task, then decide the first two MVP datasets.
+Phase 2 first milestone: design and implement data ingestion helpers that load these dataset configs, read raw files without modifying them, and validate the expected schema.
 
 ## Key Commands
 
