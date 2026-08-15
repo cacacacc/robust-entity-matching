@@ -259,3 +259,66 @@ pair_id,label,combined_token_jaccard,combined_numeric_overlap
 - `data/processed/*/*.summary.json`
 
 对应实验结果：暂未产生。当前只是生成和验证 feature tables。
+
+## 11. leakage guard
+
+英文术语：Leakage Guard
+
+定义：在训练模型前，自动检查 train、validation、test 之间有没有不该出现的重复或重叠。
+
+本项目当前检查四类风险：
+
+- within-split duplicate pair IDs：同一个 split 内 pair 重复；
+- cross-split pair overlap：同一个 pair 同时出现在不同 split；
+- cross-split record overlap：同一条 source record 同时出现在不同 split；
+- cross-split entity overlap：同一个真实实体同时出现在不同 split。
+
+为什么需要：如果模型在训练时见过测试实体或测试 pair 的一部分，测试指标可能会虚高。这样得到的结论不能支持 RQ2 的 unseen-entity generalization。
+
+当前真实发现：
+
+- WDC `train_small` 和 `test_unseen_100un` 没有 pair、record、entity overlap；
+- WDC `train_small` 和 `valid_small` 有 500 个 entity overlap；
+- `abt-buy` train 内部有 duplicate pair IDs，train/test 之间也有 pair 和 record overlap。
+
+常见误区：不要因为 test split 是 unseen，就自动假设 train、validation、test 三者完全 entity-disjoint。guard report 要逐对检查。
+
+对应代码路径：
+
+- `src/entity_matching/splitting/manifest.py`
+- `src/entity_matching/splitting/guards.py`
+- `tests/test_split_guards.py`
+- `scripts/check_split_guards.py`
+
+对应实验结果：暂未产生。当前只是训练前的数据协议检查。
+
+## 12. model-ready matrix
+
+英文术语：Model-Ready Matrix
+
+定义：把 feature table 变成模型可以直接读取的三个核心对象：
+
+- `X`：二维数值特征列表；
+- `y`：标签列表；
+- `pair_ids`：每一行对应的 pair ID。
+
+直观例子：
+
+```text
+pair_ids = ["14654897#36425270", ...]
+y = [1, ...]
+X = [[0.0, 0.2, 0.5, ...], ...]
+```
+
+为什么需要：feature table 是文件格式，model-ready matrix 是训练接口。先建立这个接口，可以保证后面 Logistic Regression、Random Forest、SVM 都用同样的 feature order 和 label alignment。
+
+常见误区：加载 matrix 不等于训练模型。当前只是确认数据已经能安全进入模型层，还没有 fit、predict 或 evaluation。
+
+对应代码路径：
+
+- `src/entity_matching/models/matrix.py`
+- `tests/test_model_matrix.py`
+- `scripts/preview_model_matrix.py`
+- `configs/models/baseline_traditional.json`
+
+对应实验结果：暂未产生。当前只是 matrix loading 和 baseline config。

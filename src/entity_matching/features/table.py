@@ -83,10 +83,14 @@ def validate_feature_rows(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
     expected_columns = set(rows[0])
     expected_feature_columns = feature_columns(rows)
     label_counts = {"0": 0, "1": 0}
+    dataset_ids = set()
+    splits = set()
 
     for index, row in enumerate(rows):
         if set(row) != expected_columns:
             raise FeatureTableError(f"Row {index} has inconsistent columns")
+        dataset_ids.add(row["dataset_id"])
+        splits.add(row["split"])
         if row["label"] not in (0, 1):
             raise FeatureTableError(f"Row {index} has invalid label: {row['label']}")
         label_counts[str(row["label"])] += 1
@@ -101,8 +105,15 @@ def validate_feature_rows(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
                     f"Row {index} column {column} is outside [0, 1]: {value!r}"
                 )
 
+    if len(dataset_ids) != 1:
+        raise FeatureTableError(f"Feature table has multiple dataset IDs: {dataset_ids}")
+    if len(splits) != 1:
+        raise FeatureTableError(f"Feature table has multiple split names: {splits}")
+
     return {
         "schema_version": FEATURE_TABLE_SCHEMA_VERSION,
+        "dataset_id": next(iter(dataset_ids)),
+        "split": next(iter(splits)),
         "text_standardization_version": TEXT_STANDARDIZATION_VERSION,
         "feature_version": STRING_FEATURE_VERSION,
         "row_count": len(rows),

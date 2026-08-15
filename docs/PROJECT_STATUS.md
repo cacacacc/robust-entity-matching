@@ -48,6 +48,16 @@ Phase 2: Data Ingestion and Data Contract.
 - Added schema validation and row-count tests for feature-table generation.
 - Exported WDC Products and CompERBench `abt-buy` feature tables from interim JSONL.
 - Bounded edit-similarity computation to the first 64 normalized characters to keep pure-Python full-split export feasible.
+- Implemented split manifest loading and feature-table validation utilities.
+- Implemented split guard reports for within-split duplicate pair IDs, cross-split pair overlap, record overlap, and entity overlap.
+- Added `scripts/check_split_guards.py` for model-readiness checks before training.
+- Confirmed WDC `train_small` vs `test_unseen_100un` passes pair, record, and entity disjoint checks.
+- Confirmed WDC `train_small` vs `valid_small` has 500 overlapping entity IDs, so the official small train/validation/test trio is not fully three-way entity-disjoint.
+- Confirmed CompERBench `abt-buy` feature tables preserve known duplicate train pairs and train/test pair and record leakage risks.
+- Implemented model-ready matrix loading from validated feature tables without fitting models.
+- Added `ModelMatrix` and `ModelMatrixBundle` containers for `X`, `y`, `pair_ids`, feature columns, label counts, and guard reports.
+- Added `scripts/preview_model_matrix.py` to inspect matrix shapes and metadata.
+- Added draft baseline configuration `configs/models/baseline_traditional.json` for planned traditional model families.
 
 ## Verification Results
 
@@ -71,12 +81,12 @@ Phase 2: Data Ingestion and Data Contract.
 - CompERBench `abt-buy` must not be used for unseen-entity claims under its official split.
 - A third product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, remains optional after the first ingestion pipeline works.
 - Standardized interim JSONL files have been generated under `data/interim/`; they are intentionally ignored by Git and can be regenerated.
-- Text standardization, initial string-similarity feature primitives, and full processed feature-table generation exist, but no splitting module, model training, or experiments have been implemented yet.
+- Text standardization, initial string-similarity feature primitives, full processed feature-table generation, split guard reporting, and model-ready matrix loading exist, but no custom splitting module, model fitting/training, or experiments have been implemented yet.
 - Quality reports are currently printed to stdout only; they are not saved as result artifacts yet.
 
 ## Next Milestone
 
-Phase 2 next milestone: implement split manifest/loading utilities and explicit leakage guards for model-ready feature tables, but still no model training.
+Phase 2 next milestone: decide the first safe baseline run protocol and add training/evaluation scaffolding. Do not run fitting until the protocol is explicitly checked.
 
 ## Key Commands
 
@@ -102,6 +112,11 @@ python scripts/preview_string_features.py data/interim/comperbench_abt_buy/train
 python -m unittest tests.test_feature_table
 python scripts/export_feature_tables.py configs/datasets/comperbench_abt_buy.json
 python scripts/export_feature_tables.py configs/datasets/wdc_products_80pair.json
+python -m unittest tests.test_split_guards
+python scripts/check_split_guards.py configs/datasets/wdc_products_80pair.json --splits train_small test_unseen_100un --require-record-disjoint --require-entity-disjoint
+python scripts/check_split_guards.py configs/datasets/comperbench_abt_buy.json --splits train test --report-only
+python -m unittest tests.test_model_matrix
+python scripts/preview_model_matrix.py configs/datasets/wdc_products_80pair.json --splits train_small test_unseen_100un --require-record-disjoint --require-entity-disjoint
 ```
 
 ## Latest Phase 1 Sources Checked

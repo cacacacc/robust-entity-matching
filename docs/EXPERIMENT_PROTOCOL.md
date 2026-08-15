@@ -148,6 +148,54 @@ Processed feature-table schema:
 - Processed feature tables are generated artifacts and are ignored by Git.
 - Processed feature tables must be regenerated from interim JSONL, not manually edited.
 
+## Split Guards
+
+Before model training, selected feature-table splits must pass explicit model-readiness checks.
+
+Current split guard report includes:
+
+- feature-table CSV and summary JSON validation;
+- consistent feature columns across selected splits;
+- within-split duplicate pair IDs;
+- cross-split pair ID overlap;
+- cross-split record ID overlap;
+- cross-split entity ID overlap when entity IDs are available.
+
+Current guard findings:
+
+- WDC Products `train_small` and `test_unseen_100un` have zero pair, record, and entity overlap.
+- WDC Products `valid_small` and `test_unseen_100un` have zero pair, record, and entity overlap.
+- WDC Products `train_small` and `valid_small` have 500 overlapping entity IDs, so the official small train/validation/test trio must not be described as fully three-way entity-disjoint.
+- CompERBench `abt-buy` train has duplicate pair IDs, and its train/test comparison has pair and record overlap.
+- `abt-buy` lacks reliable entity IDs in the current config, so strict entity-disjoint checks are unavailable and must fail closed when required.
+
+Guard commands:
+
+```powershell
+python scripts/check_split_guards.py configs/datasets/wdc_products_80pair.json --splits train_small test_unseen_100un --require-record-disjoint --require-entity-disjoint
+python scripts/check_split_guards.py configs/datasets/comperbench_abt_buy.json --splits train test --report-only
+```
+
+## Model-Ready Matrix Loading
+
+Model-ready matrices can be loaded only after feature-table validation and split guards.
+
+Current matrix contract:
+
+- `X`: list of numeric feature vectors.
+- `y`: list of integer labels where `1` means match and `0` means non-match.
+- `pair_ids`: row-aligned pair identifiers for traceability and error analysis.
+- `feature_columns`: ordered feature names used to build every vector.
+- `label_counts`: split-level label counts copied from validated summaries.
+- `guard_report`: the split guard report used before loading the bundle.
+
+Current restrictions:
+
+- Matrix loading does not fit, train, tune, or evaluate any model.
+- Strict unseen loading should require pair, record, and entity disjoint checks.
+- Non-strict diagnostic loading is allowed only when explicitly requested, for example for `abt-buy` smoke checks.
+- Baseline model families are recorded in `configs/models/baseline_traditional.json` as planned models only.
+
 ## Models
 
 Planned traditional baselines:

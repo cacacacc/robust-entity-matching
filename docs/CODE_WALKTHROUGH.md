@@ -440,3 +440,98 @@ OK
 ```powershell
 python scripts/export_feature_tables.py configs/datasets/wdc_products_80pair.json
 ```
+
+## `src/entity_matching/splitting/manifest.py`
+
+文件职责：
+
+读取并验证 processed feature tables，生成 model-ready split manifest。
+
+主要对象和函数：
+
+- `FeatureTableSplit`：一个 split 的 CSV path、summary path、row count、label counts、feature columns 和 duplicate pair 统计。
+- `SplitManifest`：一个 dataset 的多个 validated splits。
+- `load_feature_table_summary(path)`：读取 `.summary.json`。
+- `load_feature_table_rows(path)`：读取 CSV，并把 label 转成 `int`、feature values 转成 `float`。
+- `validate_feature_table_file(csv_path, summary_path)`：验证 CSV 与 summary 是否一致。
+- `build_split_manifest(config_path, processed_root, split_names)`：为一组 split 生成 manifest。
+
+验证内容：
+
+- summary 必须包含 schema、dataset、split、row count、label counts、feature columns；
+- CSV row count 必须等于 summary；
+- label counts 必须等于 summary；
+- feature columns 必须一致；
+- feature values 必须在 `[0.0, 1.0]`；
+- duplicate pair IDs 会被记录，不会阻止 report 生成。
+
+## `src/entity_matching/splitting/guards.py`
+
+文件职责：
+
+在模型训练前生成 split guard report，并在需要时 fail closed。
+
+主要函数：
+
+- `build_split_guard_report(config_path, processed_root, split_names)`：生成完整 guard report。
+- `assert_no_leakage(report, require_pair_disjoint, require_record_disjoint, require_entity_disjoint)`：根据选择的严格程度抛出 `SplitGuardError`。
+- `compare_pair_sets(manifest)`：检查 processed feature tables 的 pair ID overlap。
+- `compare_record_and_entity_sets(config_path, split_names)`：基于 normalized pair tables 检查 record/entity overlap。
+
+关键发现：
+
+- WDC `train_small` 和 `test_unseen_100un` 可通过严格 pair、record、entity disjoint check。
+- WDC `train_small` 和 `valid_small` 有 500 个 entity overlap。
+- `abt-buy` train 有 duplicate pair IDs，train/test 有 pair 和 record overlap。
+
+## `scripts/check_split_guards.py`
+
+文件职责：
+
+命令行运行 split guard report。
+
+示例：
+
+```powershell
+python scripts/check_split_guards.py configs/datasets/wdc_products_80pair.json --splits train_small test_unseen_100un --require-record-disjoint --require-entity-disjoint
+python scripts/check_split_guards.py configs/datasets/comperbench_abt_buy.json --splits train test --report-only
+```
+
+## `src/entity_matching/models/matrix.py`
+
+文件职责：
+
+把已经通过 feature-table validation 和 split guards 的 CSV 转成模型将来要用的 `X`、`y` 和 `pair_ids`。当前不训练模型。
+
+主要对象和函数：
+
+- `ModelMatrix`：一个 split 的 `X`、`y`、`pair_ids`、feature columns 和 label counts。
+- `ModelMatrixBundle`：多个 split 的矩阵，加上 guard report。
+- `load_model_matrix(manifest, split_name)`：从 validated manifest 读取一个 split。
+- `load_model_matrix_bundle(config_path, ...)`：先运行 guard，再读取多个 split。
+- `summarize_model_matrix(matrix)`：返回摘要，不打印完整 `X`。
+
+关键实现选择：
+
+- 继续使用 Python list，不引入 NumPy、pandas 或 scikit-learn。
+- `pair_ids` 与 `X` / `y` 行对齐，方便后续 error analysis。
+- 如果 strict guards 不通过，matrix loading 会 fail closed。
+- `abt-buy` 这类有 known leakage 的数据只能在显式允许时做 diagnostic preview。
+
+## `scripts/preview_model_matrix.py`
+
+文件职责：
+
+预览 model-ready matrix 的 shape、feature columns、label counts 和第一条 pair，不进行训练。
+
+示例：
+
+```powershell
+python scripts/preview_model_matrix.py configs/datasets/wdc_products_80pair.json --splits train_small test_unseen_100un --require-record-disjoint --require-entity-disjoint
+```
+
+## `configs/models/baseline_traditional.json`
+
+文件职责：
+
+记录计划中的 traditional baseline families 和随机种子。当前状态是 `draft_not_trained`，不代表模型已经实现或训练。

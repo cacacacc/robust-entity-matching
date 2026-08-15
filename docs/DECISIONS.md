@@ -239,3 +239,35 @@ Reasoning: Full pure-Python Levenshtein on long descriptions made full dataset e
 Impact: `combined_edit_similarity` and long-field edit similarities are approximate prefix-based features. This must be disclosed in methods and can later be revisited with an optimized dependency or feature ablation.
 
 Evidence available at decision time: Full export timed out before bounding; after bounding, all 29 tests passed in about 13 seconds, `abt-buy` export completed in about 13 seconds, and WDC Products export completed in about 45 seconds.
+
+## 2026-08-15: Add split guards before model-ready matrix loading
+
+Decision: Implement split manifest validation and leakage guard reports before adding model-fitting code.
+
+Alternatives considered:
+
+- Start model training directly from processed CSV files.
+- Rely only on earlier data quality notes.
+- Fail all datasets with any duplicate pair IDs before reporting diagnostics.
+
+Reasoning: The project research questions depend on fair evaluation protocols. Model training should not begin until feature tables have been validated and split leakage is explicitly checked. Guard reports should be able to report known dataset problems, such as `abt-buy` duplicate pairs, instead of crashing before producing diagnostic evidence.
+
+Impact: Future training code should call split guards before loading model matrices. Strict unseen claims should require pair, record, and entity disjoint checks. Fixed-split baseline experiments may still use non-strict datasets, but only with documented limitations.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 35 tests. Guard reports confirmed WDC `train_small` vs `test_unseen_100un` has zero pair, record, and entity overlap; WDC `train_small` vs `valid_small` has 500 overlapping entity IDs; and `abt-buy` train/test has duplicate and cross-split leakage risks.
+
+## 2026-08-15: Load model-ready matrices without fitting models
+
+Decision: Add pure-Python `ModelMatrix` and `ModelMatrixBundle` loaders that convert validated feature tables into `X`, `y`, and `pair_ids`, while keeping model fitting out of scope.
+
+Alternatives considered:
+
+- Install scikit-learn and fit the first baseline immediately.
+- Use pandas or NumPy as the matrix representation now.
+- Let training code read CSV files directly without a checked matrix contract.
+
+Reasoning: The project needs a clear boundary between data readiness and model training. A lightweight matrix loader verifies row alignment, feature column order, labels, and guard constraints before any estimator is introduced. This keeps the next training step smaller and reduces the chance of silent feature/label misalignment.
+
+Impact: Future training code should consume `ModelMatrixBundle` rather than raw CSV rows. Baseline model definitions are documented in `configs/models/baseline_traditional.json`, but their implementations and hyperparameters are not locked yet.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 40 tests. `scripts/preview_model_matrix.py` loaded WDC `train_small` and `test_unseen_100un` with strict record/entity guards and reported aligned 24-feature vectors.
