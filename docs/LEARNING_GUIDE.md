@@ -189,3 +189,73 @@ Apple iPhone 14 Pro 256GB
 
 对应实验结果：暂未产生。
 
+## 9. string similarity features
+
+英文术语：String Similarity Features
+
+定义：把两条记录之间的文本相似程度转换成机器学习模型可以读取的数字。
+
+在本项目中，当前第一版 feature schema 是 `string_similarity_v1`。
+
+当前已经实现的直观特征：
+
+- `exact_match`：两个标准化字符串是否完全一样；
+- `token_jaccard`：两个 token 集合有多少重叠；
+- `edit_similarity`：一个字符串改成另一个字符串需要多少编辑操作，越接近表示越相似；
+- `numeric_overlap`：数字 token 的重叠程度，例如型号、容量、价格中的数字。
+
+直观例子：
+
+```text
+left title:  sony camera 10x
+right title: sony camcorder 10x
+```
+
+这两个标题不是 exact match，但 token 中都包含 `sony` 和 `10x`，所以 token Jaccard 会大于 0。数字 token 也有重叠，因此 numeric overlap 可能提供额外信号。
+
+为什么需要：机器学习模型不能直接理解原始标题、描述和价格字段。我们要先把“像不像”变成数值特征，后面 Logistic Regression、Random Forest 和 SVM 才能学习。
+
+常见误区：两个字段都缺失不应该自动算作相似。在本项目中，两个缺失值的 `exact_match` 记为 `0.0`，避免 missing value 太多时虚高。
+
+对应代码路径：
+
+- `src/entity_matching/features/string_similarity.py`
+- `tests/test_string_similarity_features.py`
+- `scripts/preview_string_features.py`
+
+对应实验结果：暂未产生。当前只是 feature primitives 和真实样本预览，还没有训练模型。
+
+## 10. feature table
+
+英文术语：Feature Table
+
+定义：每一行是一对记录，每一列是模型可以读取的数值特征，再加上必要的 metadata，例如 `pair_id` 和 `label`。
+
+在本项目中，当前第一版 feature-table schema 是 `feature_table_v1`。
+
+直观例子：
+
+```text
+pair_id,label,combined_token_jaccard,combined_numeric_overlap
+14654897#36425270,1,0.2,0.2
+```
+
+这表示某一对记录是 `match`，它们的 combined token overlap 和 numeric overlap 都是 `0.2`。
+
+为什么需要：模型不能直接吃 nested JSON 或原始文本。我们需要把每个 pair 转成固定列的表格，后续 Logistic Regression、Random Forest 和 SVM 才能训练。
+
+常见误区：生成 feature table 不等于训练模型。它只是把数据准备成 model-ready 的形状，还没有产生实验结果。
+
+对应代码路径：
+
+- `src/entity_matching/features/table.py`
+- `tests/test_feature_table.py`
+- `scripts/export_feature_tables.py`
+
+对应本地输出：
+
+- `data/processed/comperbench_abt_buy/*.csv`
+- `data/processed/wdc_products_80pair/*.csv`
+- `data/processed/*/*.summary.json`
+
+对应实验结果：暂未产生。当前只是生成和验证 feature tables。

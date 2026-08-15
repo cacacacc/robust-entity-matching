@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 1: Literature and Dataset Audit.
+Phase 2: Data Ingestion and Data Contract.
 
 ## Completed Work
 
@@ -23,6 +23,31 @@ Phase 1: Literature and Dataset Audit.
 - Found WDC Products `80pair` has suitable fields for labels, pair IDs, cluster IDs, and hard-negative flags.
 - Found CompERBench `abt-buy` is small and useful, but its official split has duplicate pairs and substantial source/target ID overlap across splits.
 - Created initial dataset configuration files for WDC Products `80pair` and CompERBench `abt-buy`.
+- Implemented initial standard-library data ingestion helpers for loading dataset configs and validating raw file schema.
+- Added a dataset audit CLI script.
+- Added standard-library unit tests for dataset config loading and raw schema validation.
+- Found and handled a real encoding issue in `abt-buy` record files by adding `cp1252` and `latin-1` fallback decoding.
+- Implemented a normalized in-memory `PairRecord` representation for WDC Products and CompERBench `abt-buy`.
+- Added `scripts/preview_pair_table.py` to summarize normalized pair tables and inspect examples.
+- Implemented data quality reports for normalized pair tables.
+- Added `scripts/report_data_quality.py` for JSON quality summaries.
+- Found that WDC Products `test_unseen_100un` has zero record/entity overlap with `train_small` and `valid_small`.
+- Found that WDC Products mixed and seen variants intentionally overlap with train/validation at the entity level, and some mixed comparisons also overlap at pair/record level.
+- Found that `abt-buy` has duplicate pairs within train and validation, plus cross-split pair and record overlap.
+- Defined interim schema version `pair_table_v1`.
+- Implemented interim JSONL export for normalized pair tables.
+- Exported WDC Products and CompERBench `abt-buy` normalized splits to `data/interim/`.
+- Implemented text standardization primitives for normalized pair attributes.
+- Added tests for missing-value handling, whitespace cleanup, tokenization, numeric-token extraction, attribute normalization, and interim pair payload standardization.
+- Added `scripts/preview_text_standardization.py` to inspect standardized text profiles from interim JSONL files.
+- Implemented initial string-similarity feature primitives under schema version `string_similarity_v1`.
+- Added tests for exact match, token Jaccard, numeric-token overlap, Levenshtein distance, edit-similarity ratio, and standardized pair feature dictionaries.
+- Added `scripts/preview_string_features.py` to inspect feature dictionaries from interim JSONL files.
+- Implemented reproducible feature-table export under schema version `feature_table_v1`.
+- Added processed CSV export plus per-split summary JSON files under `data/processed/`.
+- Added schema validation and row-count tests for feature-table generation.
+- Exported WDC Products and CompERBench `abt-buy` feature tables from interim JSONL.
+- Bounded edit-similarity computation to the first 64 normalized characters to keep pure-Python full-split export feasible.
 
 ## Verification Results
 
@@ -40,16 +65,18 @@ Phase 1: Literature and Dataset Audit.
 ## Current Issues
 
 - No Python environment has been created yet.
-- No ingestion code, tests, or experiments have been added yet.
+- Initial ingestion validation code and tests exist.
 - Dataset choice is now provisionally selected but not protocol-locked.
 - Local raw audit files have been downloaded under `data/raw/`; they are intentionally ignored by Git.
 - CompERBench `abt-buy` must not be used for unseen-entity claims under its official split.
 - A third product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, remains optional after the first ingestion pipeline works.
-- Dataset configs are created, but no loader has validated them programmatically yet.
+- Standardized interim JSONL files have been generated under `data/interim/`; they are intentionally ignored by Git and can be regenerated.
+- Text standardization, initial string-similarity feature primitives, and full processed feature-table generation exist, but no splitting module, model training, or experiments have been implemented yet.
+- Quality reports are currently printed to stdout only; they are not saved as result artifacts yet.
 
 ## Next Milestone
 
-Phase 2 first milestone: design and implement data ingestion helpers that load these dataset configs, read raw files without modifying them, and validate the expected schema.
+Phase 2 next milestone: implement split manifest/loading utilities and explicit leakage guards for model-ready feature tables, but still no model training.
 
 ## Key Commands
 
@@ -59,6 +86,22 @@ git status --short --branch
 git remote -v
 python --version
 git --version
+python -m unittest tests.test_data_validation
+python scripts/audit_dataset.py configs/datasets/wdc_products_80pair.json
+python scripts/audit_dataset.py configs/datasets/comperbench_abt_buy.json
+python scripts/preview_pair_table.py configs/datasets/wdc_products_80pair.json train_small --examples 1
+python scripts/preview_pair_table.py configs/datasets/comperbench_abt_buy.json train --examples 1
+python scripts/report_data_quality.py configs/datasets/wdc_products_80pair.json
+python scripts/report_data_quality.py configs/datasets/comperbench_abt_buy.json
+python scripts/export_interim_pairs.py configs/datasets/wdc_products_80pair.json
+python scripts/export_interim_pairs.py configs/datasets/comperbench_abt_buy.json
+python -m unittest tests.test_preprocessing
+python scripts/preview_text_standardization.py data/interim/comperbench_abt_buy/train.jsonl --examples 1
+python -m unittest tests.test_string_similarity_features
+python scripts/preview_string_features.py data/interim/comperbench_abt_buy/train.jsonl --examples 1
+python -m unittest tests.test_feature_table
+python scripts/export_feature_tables.py configs/datasets/comperbench_abt_buy.json
+python scripts/export_feature_tables.py configs/datasets/wdc_products_80pair.json
 ```
 
 ## Latest Phase 1 Sources Checked

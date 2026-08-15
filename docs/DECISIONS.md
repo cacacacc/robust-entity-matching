@@ -95,3 +95,147 @@ Reasoning: JSON can be read with the Python standard library and avoids adding d
 Impact: Phase 2 ingestion code should load dataset metadata from `configs/datasets/*.json` and validate raw files against those configs.
 
 Evidence available at decision time: The project has no Python environment or dependency lock yet, and AGENTS.md requires paths and hyperparameters to live in configuration files rather than being hard-coded.
+
+## 2026-08-15: Use Python standard library for initial ingestion validation
+
+Decision: Implement the first ingestion validation helpers using the Python standard library only.
+
+Alternatives considered:
+
+- Use pandas immediately.
+- Delay validation until a virtual environment is created.
+- Validate schemas manually through shell commands only.
+
+Reasoning: The first Phase 2 milestone only needs config parsing, CSV reading, JSONL-GZIP reading, field checks, and count checks. These are all possible with `json`, `csv`, and `gzip`, avoiding premature dependency setup.
+
+Impact: The project can validate raw files and configs before choosing dependency versions. Pandas can still be introduced later for feature engineering and experiment pipelines if useful.
+
+Evidence available at decision time: `python -m unittest tests.test_data_validation` passed, and both dataset audit scripts produced expected label counts.
+
+## 2026-08-15: Support encoding fallback for CompERBench record files
+
+Decision: Read CSV files with UTF-8 first, then fall back to `cp1252` and `latin-1` if decoding fails.
+
+Alternatives considered:
+
+- Force all raw CSV files to UTF-8.
+- Manually edit raw records to UTF-8.
+- Ignore record files and validate pair files only.
+
+Reasoning: Raw data must remain unchanged. Local validation found that `abt-buy` record files contain non-UTF-8 characters, so ingestion must handle the original encoding rather than modifying the source files.
+
+Impact: Data loading is more robust while preserving raw files. Future documentation should mention this encoding behavior when explaining ingestion.
+
+Evidence available at decision time: The first validation run failed with `UnicodeDecodeError` on `1_abt.csv`; after adding fallback decoding, unit tests and audit scripts passed.
+
+## 2026-08-15: Normalize raw pairs into an in-memory PairRecord contract
+
+Decision: Convert WDC Products and CompERBench `abt-buy` raw rows into a shared `PairRecord` dataclass before downstream preprocessing and feature engineering.
+
+Alternatives considered:
+
+- Keep dataset-specific row formats throughout the pipeline.
+- Immediately write standardized processed files to disk.
+- Use pandas DataFrames as the first standardized representation.
+
+Reasoning: A shared dataclass makes the expected fields explicit while keeping this milestone small. Keeping the representation in memory avoids creating processed data before data quality reporting and data contract details are stable.
+
+Impact: Feature engineering and split checks can later consume one consistent pair format. Processed file writing remains a later Phase 2 step after quality reports are implemented.
+
+Evidence available at decision time: `python -m unittest tests.test_data_validation` passed with six tests, and `scripts/preview_pair_table.py` produced valid examples for both WDC Products and `abt-buy`.
+
+## 2026-08-15: Generate data quality reports before feature engineering
+
+Decision: Add a data quality reporting step before implementing text normalization and pairwise similarity features.
+
+Alternatives considered:
+
+- Move directly to feature engineering.
+- Only rely on manual schema audit notes.
+- Wait until after model training to inspect missing values and overlaps.
+
+Reasoning: Missing values, duplicate pairs, and split overlap directly affect feature validity and experimental fairness. Detecting them before feature engineering prevents hidden leakage and invalid assumptions.
+
+Impact: Phase 2 now includes programmatic quality reports. Feature engineering must use these findings, especially missing brand/description in WDC and missing price in `abt-buy`.
+
+Evidence available at decision time: Quality reports found WDC `test_unseen_100un` has zero entity overlap with train/validation, while WDC mixed variants and `abt-buy` official splits have overlap that must be interpreted carefully.
+
+## 2026-08-15: Write normalized pair tables to ignored interim JSONL files
+
+Decision: Export normalized `PairRecord` tables to `data/interim/<dataset_id>/<split>.jsonl` using schema version `pair_table_v1`.
+
+Alternatives considered:
+
+- Keep all normalized pairs only in memory.
+- Write processed CSV files.
+- Wait until feature engineering before materializing any intermediate data.
+
+Reasoning: Interim JSONL files give later feature engineering a stable, inspectable input without modifying raw data. JSONL preserves nested left/right attributes cleanly and can be generated with the Python standard library. Because `data/interim/` is ignored by Git, generated files do not pollute the repository.
+
+Impact: Future preprocessing and feature code can read `pair_table_v1` instead of rejoining raw files every time. The interim files remain reproducible artifacts, not source data.
+
+Evidence available at decision time: Export scripts wrote 5,010 `abt-buy` train rows and 4,500 WDC unseen test rows with matching line counts, and `git check-ignore` confirmed the outputs are excluded by `.gitignore`.
+
+## 2026-08-15: Keep text standardization small and dependency-free before feature engineering
+
+Decision: Implement text standardization as Python standard-library primitives under `src/entity_matching/preprocessing/`, without writing final processed feature tables yet.
+
+Alternatives considered:
+
+- Add pandas or scikit-learn preprocessing immediately.
+- Combine text normalization and similarity feature extraction in one module.
+- Write normalized text artifacts to `data/processed/` before feature definitions are stable.
+
+Reasoning: Lowercasing, whitespace cleanup, missing-value handling, tokenization, and numeric-token extraction are needed before reliable string-similarity features can be tested. Keeping these as small pure functions makes behavior easy to test and review before introducing feature engineering or model dependencies.
+
+Impact: Feature engineering should consume `text_standardization_v1` profiles instead of repeatedly inventing local normalization rules. Final processed feature files remain out of scope until feature definitions are implemented and validated.
+
+Evidence available at decision time: `python -m unittest tests.test_preprocessing` passed seven tests, and `scripts/preview_text_standardization.py` successfully previewed standardized profiles from interim JSONL input.
+
+## 2026-08-15: Implement initial string-similarity features as primitives before full feature tables
+
+Decision: Add dependency-free string-similarity primitives under `src/entity_matching/features/` with schema version `string_similarity_v1`, and preview them from interim JSONL without generating full processed feature tables yet.
+
+Alternatives considered:
+
+- Install feature-engineering dependencies immediately.
+- Generate full processed feature tables before feature definitions are tested.
+- Skip simple string features and move directly to model training.
+
+Reasoning: The first feature layer should be transparent and easy to audit. Exact match, token Jaccard, numeric-token overlap, and normalized edit similarity are simple enough to test with the Python standard library and are aligned with the traditional-baseline MVP. Delaying full feature-table export keeps this milestone focused on feature semantics rather than pipeline scale.
+
+Impact: Downstream feature-table generation should reuse `string_similarity_v1` rather than redefining similarity behavior. Missing-vs-missing exact matches are scored as `0.0` to avoid inflated similarity from shared missing fields. Feature names should remain snake_case for stable model inputs.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 24 tests, and `scripts/preview_string_features.py` produced feature dictionaries for both `abt-buy` and WDC interim JSONL examples.
+
+## 2026-08-15: Materialize feature tables as ignored CSV files with summary metadata
+
+Decision: Export full split-level feature tables to `data/processed/<dataset_id>/<split>.csv` using schema version `feature_table_v1`, with a sibling `.summary.json` file for each split.
+
+Alternatives considered:
+
+- Keep features only as preview dictionaries.
+- Write nested JSONL feature rows.
+- Move directly from interim JSONL to model training without materialized feature tables.
+
+Reasoning: CSV gives traditional ML baselines a simple, inspectable tabular input. The summary JSON preserves reproducibility metadata that should not be buried in the CSV itself: schema version, text standardization version, feature version, row counts, label counts, and feature column names. Keeping `data/processed/` ignored by Git prevents generated artifacts from polluting the repository.
+
+Impact: Future model training should read `feature_table_v1` CSV files and validate them against the summary metadata before fitting. Feature-table export remains a reproducible generation step, not a source-data editing step.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 29 tests. Export completed for `abt-buy` and WDC Products, producing expected row counts such as 5,010 `abt-buy` train rows and 4,500 WDC unseen test rows.
+
+## 2026-08-15: Bound edit similarity for pure-Python full-split export
+
+Decision: Compute `edit_similarity_ratio` on the first 64 normalized characters by default while keeping full `levenshtein_distance` available as a primitive.
+
+Alternatives considered:
+
+- Compute full Levenshtein edit similarity for every combined text and description field.
+- Drop edit similarity entirely.
+- Install optimized external string-similarity dependencies immediately.
+
+Reasoning: Full pure-Python Levenshtein on long descriptions made full dataset export exceed local time limits. Bounded edit similarity keeps short title/name comparisons useful while making full-split export feasible without adding dependencies. Long descriptions are still represented by token Jaccard and numeric-token overlap.
+
+Impact: `combined_edit_similarity` and long-field edit similarities are approximate prefix-based features. This must be disclosed in methods and can later be revisited with an optimized dependency or feature ablation.
+
+Evidence available at decision time: Full export timed out before bounding; after bounding, all 29 tests passed in about 13 seconds, `abt-buy` export completed in about 13 seconds, and WDC Products export completed in about 45 seconds.

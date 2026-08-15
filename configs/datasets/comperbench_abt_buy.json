@@ -21,7 +21,8 @@
   "file_format": {
     "pair_files": "csv",
     "record_files": "csv",
-    "records_container": "zip"
+    "records_container": "zip",
+    "encoding_note": "Pair files read as UTF-8. Record files may contain non-UTF-8 characters and require cp1252 or latin-1 fallback."
   },
   "splits": {
     "train": "gs_train.csv",
@@ -111,4 +112,3 @@
     "Hard-negative labels are not provided; any hard-negative experiment requires a project-defined sampling rule."
   ]
 }
-

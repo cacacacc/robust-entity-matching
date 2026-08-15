@@ -456,6 +456,11 @@ Source records:
 - `manufacturer`
 - `price`
 
+Encoding note:
+
+- pair files read successfully as UTF-8;
+- record files contain non-UTF-8 characters, so ingestion must support a `cp1252` or `latin-1` fallback.
+
 Record counts:
 
 - Abt source records：1,081；
@@ -509,3 +514,57 @@ Rationale:
 Open decision:
 
 - Whether to include a third CompERBench product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, after the first ingestion pipeline works.
+
+## 2026-08-15：程序化 data quality report 结果
+
+本次新增程序化质量报告，基于 normalized `PairRecord` 表示，而不是手工 shell 检查。
+
+### WDC Products `80pair`
+
+关键发现：
+
+- `train_small`、`valid_small` 和 `test_unseen_100un` 之间没有 pair、record 或 entity overlap。
+- `test_seen_000un` 与 `train_small` 的 entity overlap 为 500，符合 fully seen benchmark 语义。
+- `test_mixed_050un` 与 `train_small` 的 entity overlap 为 250，record overlap 为 110，pair overlap 为 8。
+- `test_mixed_050un` 与 `valid_small` 的 entity overlap 为 250，record overlap 为 103，pair overlap 为 11。
+
+解释：
+
+WDC 的 `100un` split 可以支撑严格 unseen-entity evaluation。`000un` 和 `050un` 是官方 seen/mixed benchmark variants，不能被解释为 entity-disjoint test sets。
+
+Missing values:
+
+WDC 的 `brand` 和 `description` 缺失很多。例如 `train_small` 中：
+
+- `left.brand_left` 缺失 1,607；
+- `right.brand_right` 缺失 1,573；
+- `left.description_left` 缺失 597；
+- `right.description_right` 缺失 636。
+
+这说明后续特征工程必须显式处理 missing values，不能假设品牌和描述总是存在。
+
+### CompERBench `abt-buy`
+
+关键发现：
+
+- `train` split 内部有 2 个 duplicate pair IDs，共 4 行；
+- `validation` split 内部有 1 个 duplicate pair ID，共 2 行；
+- `train` 与 `validation` 有 2 个 pair ID overlap；
+- `train` 与 `test` 有 1 个 pair ID overlap；
+- `train` 与 `test` record ID overlap 为 822；
+- 没有可用 entity ID，因此 entity overlap 无法计算。
+
+解释：
+
+`abt-buy` 可以用于小型 ingestion、feature 和 baseline smoke tests，也可以用于 class-ratio 方法开发；但不能用于严格 leakage-free conclusion，也不能用于 unseen-entity conclusion。
+
+Missing values:
+
+`abt-buy` 的 price 缺失严重。例如：
+
+- train 中 `left.price` 缺失 3,305；
+- train 中 `right.price` 缺失 2,041；
+- validation 中 `left.price` 缺失 983；
+- test 中 `left.price` 缺失 453。
+
+后续特征工程不能直接依赖 price；如果使用 price difference，需要设计 missing-value fallback 或显式缺失指示特征。
