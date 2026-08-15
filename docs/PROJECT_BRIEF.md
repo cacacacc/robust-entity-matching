@@ -4,6 +4,8 @@
 
 Entity matching, also called record linkage or entity resolution, decides whether two records from possibly different sources refer to the same real-world entity. This project studies how robust traditional machine-learning entity-matching models are under class imbalance and unseen-entity distribution shift.
 
+The project is motivated by a practical evaluation concern: entity-matching models may look strong when train and test pairs are randomly mixed, but may perform worse when evaluated on entities that never appeared during training.
+
 ## Research Questions
 
 RQ1: How do different match-to-non-match ratios in the training and test sets affect precision, recall, F1 score, PR-AUC, and calibration of traditional entity-matching classifiers?
@@ -32,4 +34,8 @@ This project will not build a production web application, wrap the work in an LL
 ## Success Criteria
 
 The project is successful only if its main claims are backed by reproducible experiments, saved configurations, saved results, tests, and clear documentation.
+
+## Advisor Fit
+
+The target advisor fit is plausible because the project directly connects record linkage, classification, data integration, data mining, and applied machine-learning methodology. This fit is based on the University of Guelph official Luiza Antonie profile, which lists Record Linkage, Data Mining, Data Integration, and Classification among her research areas.
 

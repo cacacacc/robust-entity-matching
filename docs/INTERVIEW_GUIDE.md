@@ -1,4 +1,158 @@
-# Interview Guide
+# 面试指南
 
-This document will collect advisor-style questions and prepared answers as the project develops.
+这个文档用于持续收集导师可能提出的问题、简短回答、深入回答、可能追问和常见错误。项目过程中不要求你现在背诵这些答案；它的作用是让每个阶段的理解都能沉淀下来，项目结束后再集中复习。
+
+## 1. 你这个项目研究什么？
+
+30 秒简短回答：
+
+这个项目研究实体匹配（Entity Matching）模型在类别不平衡（Class Imbalance）和未见实体分布偏移（Unseen-Entity Shift）下是否仍然可靠。它不只追求一个最高 F1，而是比较 class ratio、pair-random split、entity-disjoint split、random negative sampling 和 hard-negative sampling 对模型表现的影响。
+
+1 到 2 分钟深入回答：
+
+实体匹配是判断两条记录是否指向同一个真实实体的问题。本项目把它建模为监督式二分类任务，每个记录对被标记为 `match` 或 `non-match`。我会使用传统机器学习模型作为 baseline，例如 Logistic Regression、Random Forest 和 SVM，然后在严格实验协议下比较它们的 precision、recall、F1、PR-AUC、confusion matrix 和 runtime。项目重点不是堆模型，而是分析实验协议如何影响结论，尤其是类别比例和实体泄漏问题。
+
+可能追问：
+
+- 为什么不用深度学习作为主线？
+- 为什么传统模型仍然有研究价值？
+- 这个项目和普通分类任务有什么不同？
+
+容易答错的地方：
+
+- 不要说“我只是做商品匹配分类器”。更准确的说法是：我研究实体匹配模型在不同评估协议下的鲁棒性。
+- 不要承诺还没有实验支持的结论。
+
+## 2. 什么是 record linkage？
+
+30 秒简短回答：
+
+Record linkage，也叫 entity matching 或 entity resolution，是判断来自不同数据源的两条记录是否描述同一个真实对象。例如两个网站上的商品标题不同，但可能指向同一款手机。
+
+1 到 2 分钟深入回答：
+
+现实数据经常来自多个系统，不同系统的命名、格式和字段可能不一致。record linkage 的目标是把这些来源中指向同一实体的记录识别出来。在本项目中，我主要关注商品匹配，即判断两个商品 listing 是否属于同一个产品。
+
+可能追问：
+
+- record、entity 和 pair 的区别是什么？
+- 为什么这个问题不只是字符串相似度问题？
+
+容易答错的地方：
+
+- 不要把“字符串相似”直接等同于“实体相同”。
+
+## 3. 为什么它可以转化为二分类？
+
+30 秒简短回答：
+
+因为每一对记录最终只有两个标签：`match` 或 `non-match`。我们可以为记录对构造相似度特征，然后训练分类器预测它属于 `match` 的概率。
+
+1 到 2 分钟深入回答：
+
+模型的输入是一对记录的特征表示，例如标题相似度、品牌是否一致、型号是否一致、数字 token 是否一致等。标签是人工或数据集提供的 `match/non-match`。模型输出概率后，再用 validation set 上选择的 threshold 转成最终标签。
+
+可能追问：
+
+- 为什么不能直接用 0.5 作为 threshold？
+- 特征是否可能泄漏标签信息？
+
+容易答错的地方：
+
+- 不要说模型直接输出“真实实体是否相同”的绝对事实。它输出的是基于训练数据和特征估计出来的概率。
+
+## 4. 什么是 class imbalance？为什么重要？
+
+30 秒简短回答：
+
+Class imbalance 是类别数量差异很大。在实体匹配中，`non-match` 通常远多于 `match`。这会让 accuracy 变得不可靠，所以项目重点报告 precision、recall、F1 和 PR-AUC。
+
+1 到 2 分钟深入回答：
+
+如果测试集中绝大多数 pair 都是 `non-match`，模型即使几乎不找 `match`，也可能得到较高 accuracy。但实体匹配真正关心的是能否找到正确匹配，同时控制误匹配。因此 precision 和 recall 的权衡更重要。RQ1 就是研究不同 match/non-match ratio 如何影响模型表现。
+
+可能追问：
+
+- 为什么 F1 也可能受测试集比例影响？
+- PR-AUC 为什么比 ROC-AUC 更适合不平衡场景？
+
+容易答错的地方：
+
+- 不要只说“数据不平衡会影响模型”。要能指出它具体影响 precision、recall、F1、PR-AUC 和阈值选择。
+
+## 5. 什么是 unseen-entity shift？
+
+30 秒简短回答：
+
+Unseen-entity shift 指测试集里的实体没有出现在训练集中。它用来检查模型是否学到通用匹配规律，而不是记住训练集中出现过的实体。
+
+1 到 2 分钟深入回答：
+
+在实体匹配里，同一个实体可能有多条记录。如果同一个实体同时出现在训练集和测试集中，即使 pair 不完全重复，模型也可能利用熟悉的实体信息获得较高分数。entity-disjoint split 要求实体不跨集合出现，因此能更严格地测试泛化。
+
+可能追问：
+
+- seen、half-seen 和 unseen entities 如何定义？
+- entity-disjoint split 对数据集有什么要求？
+
+容易答错的地方：
+
+- 不要把“pair 没重复”当成“没有泄漏”。实体层面的重叠也可能造成泄漏。
+
+## 6. 为什么 pair-random split 可能高估结果？
+
+30 秒简短回答：
+
+因为 pair-random split 随机划分的是记录对，而不是实体。同一个实体可能同时出现在训练和测试 pair 中，导致模型在测试时遇到熟悉实体，从而高估泛化能力。
+
+1 到 2 分钟深入回答：
+
+例如训练集中有 `(A, B)`，测试集中有 `(A, C)`，它们不是同一个 pair，但都包含实体 A。模型可能因为训练时见过 A 的文本和属性而表现更好。这个分数不一定代表模型能处理全新实体。因此本项目会比较 pair-random split 和 entity-disjoint split。
+
+可能追问：
+
+- pair leakage 和 entity leakage 有什么区别？
+- entity-disjoint split 是否一定更接近真实应用？
+
+容易答错的地方：
+
+- 不要说 pair-random split 一定错误。它可以作为 baseline，但需要知道它可能乐观。
+
+## 7. 这个项目为什么适合本科个人研究？
+
+30 秒简短回答：
+
+因为它的核心实验可以用公开数据集、传统机器学习模型和可控的实验协议完成，不依赖昂贵算力或大模型。同时它有清晰的研究问题、可复现要求和错误分析空间。
+
+1 到 2 分钟深入回答：
+
+项目范围被限制在 MVP 内：两个公开数据集、三种传统 baseline、两种划分协议、不同 class ratio、两种 negative sampling 策略和多随机种子。它足够完整，可以展示研究设计能力；但又不会像大规模 Transformer 或全量 WDC 实验那样超出个人资源。
+
+可能追问：
+
+- 最大风险是什么？
+- 如果数据集不支持 entity-disjoint split 怎么办？
+
+容易答错的地方：
+
+- 不要把 optional extensions 说成已经完成或一定会做。
+
+## 8. 当前阶段还不能声称什么？
+
+30 秒简短回答：
+
+当前 Phase 0 只完成了项目定义、概念解释、RQ 审查和环境检查。还没有数据、模型或实验结果，所以不能声称任何模型有效或某种协议一定更好。
+
+1 到 2 分钟深入回答：
+
+目前的结论只包括研究问题可行、项目范围合理、与目标导师方向相关，以及本地仓库结构准备好。真正的实验证据要等 Phase 1 数据审计和后续 pipeline 完成后才能产生。
+
+可能追问：
+
+- 你如何避免夸大项目？
+- 你如何区分计划、假设和结果？
+
+容易答错的地方：
+
+- 不要说“hard-negative sampling 会提升表现”。现在最多只能说“项目将检验它是否提升表现”。
 
