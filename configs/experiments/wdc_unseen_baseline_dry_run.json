@@ -1,0 +1,25 @@
+{
+  "experiment_id": "wdc_unseen_baseline_dry_run",
+  "status": "dry_run_only",
+  "purpose": "Validate the first safe WDC unseen baseline inputs without fitting or evaluating models.",
+  "dataset_config": "configs/datasets/wdc_products_80pair.json",
+  "model_config": "configs/models/baseline_traditional.json",
+  "processed_root": "data/processed",
+  "splits": {
+    "train": "train_small",
+    "test": "test_unseen_100un",
+    "validation": null
+  },
+  "guards": {
+    "require_pair_disjoint": true,
+    "require_record_disjoint": true,
+    "require_entity_disjoint": true
+  },
+  "fit_allowed": false,
+  "fit_blockers": [
+    "Validation and threshold-selection protocol is not locked yet.",
+    "This config is for matrix and guard dry-run only."
+  ],
+  "planned_first_model": "logistic_regression",
+  "notes": "WDC train_small and test_unseen_100un pass strict disjoint checks. Do not fit until validation/threshold protocol is explicitly decided."
+}

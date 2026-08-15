@@ -196,6 +196,33 @@ Current restrictions:
 - Non-strict diagnostic loading is allowed only when explicitly requested, for example for `abt-buy` smoke checks.
 - Baseline model families are recorded in `configs/models/baseline_traditional.json` as planned models only.
 
+## Baseline Dry-Run Protocol
+
+The first baseline protocol currently exists only as a dry-run config:
+
+- Config: `configs/experiments/wdc_unseen_baseline_dry_run.json`.
+- Status: `dry_run_only`.
+- Dataset: WDC Products `80pair`.
+- Selected splits:
+  - train: `train_small`;
+  - test: `test_unseen_100un`;
+  - validation: `null`.
+- Required guards:
+  - pair-disjoint;
+  - record-disjoint;
+  - entity-disjoint.
+- Planned first model family: `logistic_regression`.
+
+This config is intentionally not fit-ready because validation and threshold-selection protocol is not locked yet. It may be used to verify dependencies, split guards, feature columns, matrix shape, label counts, and model config status.
+
+Current local dependency status from dry-run:
+
+- `sklearn`: available;
+- `numpy`: available;
+- `pandas`: available.
+
+Availability does not imply permission to train. Fitting remains blocked until the protocol explicitly allows it.
+
 ## Models
 
 Planned traditional baselines:
@@ -210,6 +237,15 @@ Hyperparameters are not locked yet.
 
 Thresholds must be selected on the validation set only. The test set must be used only for final evaluation.
 
+Current threshold-selection scaffold:
+
+- Version: `threshold_selection_v1`.
+- Function: `select_threshold_on_validation`.
+- Current selection metric: F1 only.
+- Threshold selection refuses any split name other than `validation`.
+- Default candidate thresholds are `0.00` through `1.00` in steps of `0.01`.
+- No project model scores exist yet, so this scaffold has only been tested with toy scores.
+
 ## Metrics
 
 Planned metrics:
@@ -221,6 +257,26 @@ Planned metrics:
 - Confusion matrix.
 - Runtime.
 - Mean and standard deviation across seeds.
+
+Current implemented metric primitives:
+
+- Version: `binary_metrics_v1`.
+- `apply_threshold`: converts scores in `[0.0, 1.0]` to binary predictions.
+- `binary_confusion_matrix`: reports `tp`, `fp`, `tn`, and `fn` for positive class `1`.
+- `precision_score`.
+- `recall_score`.
+- `f1_score`.
+- `evaluate_binary_scores`: returns threshold, class counts, confusion matrix, precision, recall, and F1.
+
+Not implemented yet:
+
+- PR-AUC;
+- calibration metrics;
+- runtime measurement;
+- mean and standard deviation across seeds;
+- saved prediction files.
+
+Metric code currently uses toy scores only. It must not be reported as experimental performance.
 
 ## Fair Comparison Rules
 

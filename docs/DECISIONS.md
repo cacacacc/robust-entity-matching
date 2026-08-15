@@ -271,3 +271,51 @@ Reasoning: The project needs a clear boundary between data readiness and model t
 Impact: Future training code should consume `ModelMatrixBundle` rather than raw CSV rows. Baseline model definitions are documented in `configs/models/baseline_traditional.json`, but their implementations and hyperparameters are not locked yet.
 
 Evidence available at decision time: `python -m unittest discover tests` passed 40 tests. `scripts/preview_model_matrix.py` loaded WDC `train_small` and `test_unseen_100un` with strict record/entity guards and reported aligned 24-feature vectors.
+
+## 2026-08-15: Keep the first baseline protocol as dry-run only
+
+Decision: Add `configs/experiments/wdc_unseen_baseline_dry_run.json` and dry-run scaffolding that validates dependencies, split guards, matrix loading, and planned model metadata without fitting a model.
+
+Alternatives considered:
+
+- Fit Logistic Regression immediately because `sklearn` is available locally.
+- Use WDC `valid_small` as validation without addressing its entity overlap with `train_small`.
+- Skip dry-run scaffolding and add training code directly.
+
+Reasoning: The project requires validation-only threshold selection, but the current safe WDC unseen pair is `train_small` versus `test_unseen_100un`; validation protocol remains unresolved because `train_small` and `valid_small` have entity overlap. A dry-run keeps progress moving while preventing accidental premature training or test-set-based decisions.
+
+Impact: The first actual baseline run must wait until threshold-selection and validation protocol are explicit. Training scripts should reject configs where `fit_allowed` is false.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 44 tests. `scripts/dry_run_baseline_protocol.py configs/experiments/wdc_unseen_baseline_dry_run.json` reported `ready_for_fit: false`, strict guard success, 24 feature columns, and local availability of `sklearn`, `numpy`, and `pandas`.
+
+## 2026-08-15: Implement metrics and threshold selection before model fitting
+
+Decision: Add dependency-free binary metric primitives and validation-only threshold-selection scaffolding before adding any model training code.
+
+Alternatives considered:
+
+- Let scikit-learn metrics handle evaluation only after model fitting.
+- Pick a fixed threshold such as `0.5` without validation-selection code.
+- Implement PR-AUC and calibration immediately.
+
+Reasoning: The protocol requires threshold selection on validation data only. Implementing this boundary before training makes it harder to accidentally tune on test data. The first metric layer should cover confusion matrix, precision, recall, and F1 because these are needed for threshold selection and are simple enough to test without dependencies.
+
+Impact: Future training code should call `select_threshold_on_validation` using validation scores only, then apply the selected threshold to held-out test scores. PR-AUC, calibration, runtime, seed aggregation, and raw prediction persistence remain future work.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 52 tests. `scripts/preview_threshold_metrics.py` produced a toy-only threshold-selection report and explicitly stated that no project predictions or experiment results were used.
+
+## 2026-08-15: Close Phase 2 only after a reproducibility audit
+
+Decision: Add `docs/PHASE_2_REPRODUCIBILITY_AUDIT.md` before moving toward Phase 3 model implementation.
+
+Alternatives considered:
+
+- Move directly from metric scaffolding into model fitting.
+- Treat passing tests as sufficient without an explicit phase-exit record.
+- Defer reproducibility review until after the first baseline result.
+
+Reasoning: Phase 2 created many data contracts and generated artifacts. A written audit makes the current state falsifiable: which tests passed, which artifacts are ignored, which claims are still forbidden, and which protocol gaps remain. This is especially important before model training, where accidental leakage or premature result claims would be harder to unwind.
+
+Impact: Phase 3 should start only after the user explicitly approves model implementation and the validation/threshold-selection protocol is clarified. Training code should refuse to run while `fit_allowed` remains false.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 52 tests; WDC `train_small` versus `test_unseen_100un` passed strict pair/record/entity guards; dry-run baseline protocol returned `ready_for_fit: false`; `results/` and `reports/` contained only `.gitkeep`; code scan found no `.fit(`, `.predict(`, `predict_proba`, `joblib`, or `pickle` training artifacts.

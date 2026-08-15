@@ -322,3 +322,73 @@ X = [[0.0, 0.2, 0.5, ...], ...]
 - `configs/models/baseline_traditional.json`
 
 对应实验结果：暂未产生。当前只是 matrix loading 和 baseline config。
+
+## 13. dry-run protocol
+
+英文术语：Dry-Run Protocol
+
+定义：在真正训练模型之前，先检查配置、依赖、split guards、feature columns、matrix shape 和 label counts 是否全部合理。
+
+在本项目中，当前 dry-run config 是：
+
+```text
+configs/experiments/wdc_unseen_baseline_dry_run.json
+```
+
+为什么需要：本地虽然已经有 `sklearn`，但这不代表可以马上训练。我们还没有锁定 validation 和 threshold-selection protocol。如果现在训练，很容易不小心用 test set 做选择，破坏实验诚信。
+
+当前 dry-run 会检查：
+
+- `fit_allowed` 必须是 `false`；
+- split 必须通过 pair / record / entity guards；
+- `X`、`y`、`pair_ids` 可以加载；
+- feature vector 长度和 feature columns 对齐；
+- planned model config 仍然是 `draft_not_trained`。
+
+常见误区：dry-run 成功不等于实验成功。它只说明“训练前输入看起来准备好了”，还没有任何模型结果。
+
+对应代码路径：
+
+- `src/entity_matching/experiments/dry_run.py`
+- `tests/test_experiment_dry_run.py`
+- `scripts/dry_run_baseline_protocol.py`
+- `configs/experiments/wdc_unseen_baseline_dry_run.json`
+
+对应实验结果：暂未产生。当前只是 protocol dry-run。
+
+## 14. threshold selection 和 metrics
+
+英文术语：Threshold Selection / Metrics
+
+定义：模型通常输出一个 `score` 或概率，例如 `0.73`。我们需要选择一个 threshold，把分数转成最终预测：
+
+```text
+score >= threshold -> predict match
+score < threshold  -> predict non-match
+```
+
+为什么 threshold 只能在 validation 上选：如果你用 test set 来挑 threshold，test set 就不再是公平的最终考试，而变成了调参数据。这会让实验结果偏乐观。
+
+当前实现的 metrics：
+
+- confusion matrix：`tp`、`fp`、`tn`、`fn`；
+- precision；
+- recall；
+- F1。
+
+直观理解：
+
+- precision：预测为 match 的里面，有多少是真的 match；
+- recall：真实 match 里面，有多少被找出来；
+- F1：precision 和 recall 的折中。
+
+常见误区：`0.5` 不一定是最佳 threshold。不同 class ratio 下，threshold 会影响 precision / recall tradeoff。
+
+对应代码路径：
+
+- `src/entity_matching/evaluation/metrics.py`
+- `src/entity_matching/evaluation/thresholds.py`
+- `tests/test_evaluation_metrics.py`
+- `scripts/preview_threshold_metrics.py`
+
+对应实验结果：暂未产生。当前只用 toy scores 测试评估逻辑。

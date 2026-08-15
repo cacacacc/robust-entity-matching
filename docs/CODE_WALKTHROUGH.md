@@ -535,3 +535,82 @@ python scripts/preview_model_matrix.py configs/datasets/wdc_products_80pair.json
 文件职责：
 
 记录计划中的 traditional baseline families 和随机种子。当前状态是 `draft_not_trained`，不代表模型已经实现或训练。
+
+## `src/entity_matching/experiments/dry_run.py`
+
+文件职责：
+
+验证第一轮 baseline protocol 是否能安全进入训练前状态，但不 fit 模型。
+
+主要函数：
+
+- `load_experiment_config(path)`：读取 dry-run experiment config。
+- `validate_experiment_config(config)`：强制当前只允许 `dry_run_only`，并且 `fit_allowed` 必须为 `false`。
+- `baseline_dependency_status()`：检查 `sklearn`、`numpy`、`pandas` 是否可用，但不训练。
+- `run_experiment_dry_run(config_path)`：运行 config validation、dependency check、split guards 和 matrix loading，返回 summary。
+
+关键实现选择：
+
+- 即使本地 `sklearn` 可用，也不调用 estimator。
+- 如果 validation/threshold protocol 未锁定，`ready_for_fit` 必须保持 `false`。
+
+## `scripts/dry_run_baseline_protocol.py`
+
+文件职责：
+
+命令行运行 baseline protocol dry-run。
+
+示例：
+
+```powershell
+python scripts/dry_run_baseline_protocol.py configs/experiments/wdc_unseen_baseline_dry_run.json
+```
+
+## `configs/experiments/wdc_unseen_baseline_dry_run.json`
+
+文件职责：
+
+记录第一轮 WDC unseen baseline 的训练前协议。当前只允许 dry-run，不允许 fit。
+
+## `src/entity_matching/evaluation/metrics.py`
+
+文件职责：
+
+提供二分类 metric primitives。当前只用于 toy scores 和未来评估脚手架，不包含真实模型结果。
+
+主要函数：
+
+- `apply_threshold(scores, threshold)`：把 `[0.0, 1.0]` 分数转成 `0/1` 预测。
+- `binary_confusion_matrix(y_true, y_pred)`：计算 `tp`、`fp`、`tn`、`fn`。
+- `precision_score(confusion)`。
+- `recall_score(confusion)`。
+- `f1_score(precision, recall)`。
+- `evaluate_binary_scores(y_true, scores, threshold)`：在固定 threshold 下返回完整指标 summary。
+
+关键实现选择：
+
+- 正类是 `1`，也就是 `match`。
+- score 和 threshold 必须在 `[0.0, 1.0]`。
+- 如果 precision 或 recall 分母为 0，返回 `0.0`。
+
+## `src/entity_matching/evaluation/thresholds.py`
+
+文件职责：
+
+只允许基于 validation split 选择 threshold。
+
+主要函数：
+
+- `select_threshold_on_validation(y_true, scores, candidate_thresholds, selection_metric, split_name)`。
+
+关键实现选择：
+
+- 当前只支持 `selection_metric="f1"`。
+- 如果 `split_name` 不是 `validation`，直接抛出错误。
+- 默认候选 threshold 是 `0.00` 到 `1.00`，步长 `0.01`。
+
+## `scripts/preview_threshold_metrics.py`
+
+文件职责：
+
+用 toy scores 演示 metric 和 threshold-selection 输出格式。它不读取项目预测，也不产生实验结果。

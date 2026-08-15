@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 2: Data Ingestion and Data Contract.
+Phase 2: Data Ingestion and Data Contract. Implementation-complete pending user approval to enter Phase 3.
 
 ## Completed Work
 
@@ -58,6 +58,15 @@ Phase 2: Data Ingestion and Data Contract.
 - Added `ModelMatrix` and `ModelMatrixBundle` containers for `X`, `y`, `pair_ids`, feature columns, label counts, and guard reports.
 - Added `scripts/preview_model_matrix.py` to inspect matrix shapes and metadata.
 - Added draft baseline configuration `configs/models/baseline_traditional.json` for planned traditional model families.
+- Added a dry-run-only first baseline protocol config at `configs/experiments/wdc_unseen_baseline_dry_run.json`.
+- Implemented experiment dry-run scaffolding that validates config, dependency availability, strict split guards, and model-ready matrix loading without fitting models.
+- Added `scripts/dry_run_baseline_protocol.py` for dry-run protocol checks.
+- Confirmed local optional ML dependencies are available (`sklearn`, `numpy`, `pandas`), but no model fitting has been run.
+- Implemented binary metric primitives under schema version `binary_metrics_v1`.
+- Implemented validation-only threshold-selection scaffold under schema version `threshold_selection_v1`.
+- Added `scripts/preview_threshold_metrics.py` with toy scores only; it does not use model predictions or project experiment results.
+- Completed Phase 2 reproducibility audit in `docs/PHASE_2_REPRODUCIBILITY_AUDIT.md`.
+- Confirmed no model fitting, prediction generation, result reporting, or saved model artifacts have been produced.
 
 ## Verification Results
 
@@ -81,12 +90,12 @@ Phase 2: Data Ingestion and Data Contract.
 - CompERBench `abt-buy` must not be used for unseen-entity claims under its official split.
 - A third product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, remains optional after the first ingestion pipeline works.
 - Standardized interim JSONL files have been generated under `data/interim/`; they are intentionally ignored by Git and can be regenerated.
-- Text standardization, initial string-similarity feature primitives, full processed feature-table generation, split guard reporting, and model-ready matrix loading exist, but no custom splitting module, model fitting/training, or experiments have been implemented yet.
+- Text standardization, initial string-similarity feature primitives, full processed feature-table generation, split guard reporting, model-ready matrix loading, dry-run baseline protocol checks, and metric/threshold scaffolding exist, but no custom splitting module, model fitting/training, predictions, or experiments have been implemented yet.
 - Quality reports are currently printed to stdout only; they are not saved as result artifacts yet.
 
 ## Next Milestone
 
-Phase 2 next milestone: decide the first safe baseline run protocol and add training/evaluation scaffolding. Do not run fitting until the protocol is explicitly checked.
+Next milestone: decide whether to enter Phase 3 model implementation. Do not fit models until explicitly approved and the validation/threshold protocol is made explicit.
 
 ## Key Commands
 
@@ -117,6 +126,11 @@ python scripts/check_split_guards.py configs/datasets/wdc_products_80pair.json -
 python scripts/check_split_guards.py configs/datasets/comperbench_abt_buy.json --splits train test --report-only
 python -m unittest tests.test_model_matrix
 python scripts/preview_model_matrix.py configs/datasets/wdc_products_80pair.json --splits train_small test_unseen_100un --require-record-disjoint --require-entity-disjoint
+python -m unittest tests.test_experiment_dry_run
+python scripts/dry_run_baseline_protocol.py configs/experiments/wdc_unseen_baseline_dry_run.json
+python -m unittest tests.test_evaluation_metrics
+python scripts/preview_threshold_metrics.py
+Get-Content docs/PHASE_2_REPRODUCIBILITY_AUDIT.md
 ```
 
 ## Latest Phase 1 Sources Checked
@@ -144,3 +158,4 @@ python scripts/preview_model_matrix.py configs/datasets/wdc_products_80pair.json
 - `docs/LEARNING_GUIDE.md`: future learning notes.
 - `docs/CODE_WALKTHROUGH.md`: future code explanation.
 - `docs/INTERVIEW_GUIDE.md`: future advisor interview preparation.
+- `docs/PHASE_2_REPRODUCIBILITY_AUDIT.md`: Phase 2 exit audit and Phase 3 readiness check.
