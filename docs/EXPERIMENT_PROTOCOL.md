@@ -294,6 +294,15 @@ Approved first run config:
 - Model: `logistic_regression` only.
 - Status: completed.
 - Result log: `docs/RESULTS_LOG.md`.
+- Result audit: `docs/PHASE_3_LOGISTIC_REGRESSION_AUDIT.md`.
+
+Approved remaining baseline config:
+
+- `configs/experiments/wdc_unseen_rf_svm_fit.json`
+- Models: `random_forest`, `svm`.
+- Status: completed.
+- Result log: `docs/RESULTS_LOG.md`.
+- Result audit: `docs/PHASE_3_RF_SVM_AUDIT.md`.
 
 Current training guard:
 
@@ -328,7 +337,7 @@ Planned metrics:
 - Precision.
 - Recall.
 - F1.
-- PR-AUC.
+- Average Precision / PR diagnostics.
 - Confusion matrix.
 - Runtime.
 - Mean and standard deviation across seeds.
@@ -342,6 +351,15 @@ Current implemented metric primitives:
 - `recall_score`.
 - `f1_score`.
 - `evaluate_binary_scores`: returns threshold, class counts, confusion matrix, precision, recall, and F1.
+
+Current implemented threshold diagnostics:
+
+- Version: `threshold_diagnostics_v1`.
+- `average_precision_score`: ranking average precision for positive class `1`.
+- `threshold_curve`: evaluates precision, recall, and F1 across a candidate threshold grid.
+- `threshold_grid_pr_auc`: coarse trapezoidal PR-AUC approximation over a finite threshold grid.
+- `scripts/export_threshold_diagnostics.py`: exports model-level AP and threshold-grid diagnostics from raw prediction CSVs.
+- Current report files: `reports/threshold_diagnostics.csv` and `reports/threshold_diagnostics.md`.
 
 Raw prediction artifact planning:
 
@@ -357,15 +375,28 @@ Run-plan preview:
 - The preview validates the protocol, matrices, model definitions, seed schedule, and planned raw prediction paths.
 - The preview reports `ready_to_execute_training: false` and does not train or predict.
 
+Result audit:
+
+- Script: `scripts/audit_baseline_results.py`.
+- The audit recomputes per-seed metrics from raw prediction CSVs.
+- The audit recomputes aggregate means and standard deviations from per-seed results.
+- The first Logistic Regression audit passed.
+
+Baseline comparison export:
+
+- Script: `scripts/export_baseline_comparison.py`.
+- CSV: `reports/baseline_comparison.csv`.
+- Markdown: `reports/baseline_comparison.md`.
+- Current ranking by test F1 mean: Random Forest, Logistic Regression, SVM.
+
 Not implemented yet:
 
-- PR-AUC;
 - calibration metrics;
-- runtime measurement;
-- mean and standard deviation across seeds;
-- additional model runs for Random Forest and SVM.
+- full calibration analysis;
+- statistical significance testing;
+- publication-ready figure export.
 
-Metric code has now been used for the first approved Logistic Regression baseline. Results must be interpreted under the locked WDC unseen protocol and the limitations recorded in `docs/RESULTS_LOG.md`.
+Metric code has now been used for the initial approved traditional baselines. Results must be interpreted under the locked WDC unseen protocol and the limitations recorded in `docs/RESULTS_LOG.md`.
 
 ## Fair Comparison Rules
 

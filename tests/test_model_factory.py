@@ -24,7 +24,7 @@ class ModelFactoryTests(unittest.TestCase):
         config = load_model_config(PROJECT_ROOT / "configs/models/baseline_traditional.json")
 
         self.assertEqual(
-            config["training_status"], "logistic_regression_first_run_completed"
+            config["training_status"], "initial_traditional_baselines_completed"
         )
         self.assertEqual(len(config["models"]), 3)
 

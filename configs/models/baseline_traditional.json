@@ -1,6 +1,6 @@
 {
   "config_id": "baseline_traditional_v1",
-  "status": "draft_with_first_logistic_run",
+  "status": "initial_baselines_completed",
   "purpose": "Define planned traditional baseline model families without fitting or tuning models yet.",
   "feature_table_schema_version": "feature_table_v1",
   "text_standardization_version": "text_standardization_v1",
@@ -25,19 +25,19 @@
     {
       "model_id": "random_forest",
       "family": "RandomForestClassifier",
-      "status": "planned",
+      "status": "first_run_completed",
       "parameters": {
         "n_estimators": 100,
         "class_weight": "balanced",
         "random_state": null,
         "n_jobs": 1
       },
-      "notes": "Initial baseline parameters. Random seed must be set by the training runner."
+      "notes": "Initial baseline parameters. First approved WDC unseen run completed in wdc_unseen_rf_svm_fit_v1."
     },
     {
       "model_id": "svm",
       "family": "SupportVectorMachine",
-      "status": "planned",
+      "status": "first_run_completed",
       "parameters": {
         "C": 1.0,
         "class_weight": "balanced",
@@ -45,8 +45,8 @@
         "probability": true,
         "random_state": null
       },
-      "notes": "Initial linear SVM baseline. Random seed must be set by the training runner."
+      "notes": "Initial linear SVM baseline. First approved WDC unseen run completed in wdc_unseen_rf_svm_fit_v1."
     }
   ],
-  "training_status": "logistic_regression_first_run_completed"
+  "training_status": "initial_traditional_baselines_completed"
 }

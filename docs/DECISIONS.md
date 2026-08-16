@@ -383,3 +383,83 @@ Reasoning: The user explicitly approved the first real baseline run. Keeping the
 Impact: The project now has one real baseline result. Random Forest and SVM remain unrun. The first result should be audited before expanding to additional models.
 
 Evidence available at decision time: `python scripts/run_approved_baseline.py configs/experiments/wdc_unseen_logistic_regression_fit.json` completed successfully. Five seeds produced selected threshold `0.66`, test F1 mean `0.5358615004122012`, precision mean `0.45582047685834504`, recall mean `0.65`, and standard deviation `0.0` for these metrics.
+
+## 2026-08-16: Audit Logistic Regression results before expanding baselines
+
+Decision: Add result-audit code and audit the first Logistic Regression baseline before running Random Forest or SVM.
+
+Alternatives considered:
+
+- Move directly to Random Forest and SVM.
+- Trust the aggregate JSON without checking raw prediction files.
+- Perform only manual inspection of a few prediction rows.
+
+Reasoning: The project depends on reproducible, auditable results. Before adding more model outputs, the first result should prove that row-level predictions can reproduce per-seed and aggregate metrics.
+
+Impact: Additional baselines should use the same raw prediction schema and should pass the same audit before their metrics are treated as reportable.
+
+Evidence available at decision time: `python -m unittest tests.test_result_audit` passed. `python scripts/audit_baseline_results.py results/summaries/wdc_unseen_logistic_regression_fit_v1/aggregate.json` reported `audit_status: passed` and confirmed stored metrics match recomputed metrics from raw predictions.
+
+## 2026-08-16: Run Random Forest and SVM under the locked WDC protocol
+
+Decision: Execute `random_forest` and `svm` under the same locked WDC unseen protocol used for Logistic Regression.
+
+Alternatives considered:
+
+- Do qualitative Logistic Regression error analysis first.
+- Change the protocol or feature set before running the remaining baselines.
+- Run only Random Forest or only SVM.
+
+Reasoning: The user explicitly requested running Random Forest and SVM under the same locked protocol. Keeping the split, threshold-selection rule, seed schedule, and raw prediction schema unchanged makes the three traditional baselines comparable.
+
+Impact: The initial traditional baseline set is now complete for the first WDC unseen protocol. Next work should compare results and decide whether to add PR-AUC, report tables, or qualitative error analysis.
+
+Evidence available at decision time: `python scripts/run_approved_baseline.py configs/experiments/wdc_unseen_rf_svm_fit.json` completed successfully. `python scripts/audit_baseline_results.py results/summaries/wdc_unseen_rf_svm_fit_v1/aggregate.json` reported `audit_status: passed`. Random Forest reached test F1 mean `0.5598631874163362`; SVM reached test F1 mean `0.5295473051367368`.
+
+## 2026-08-16: Export a tracked comparison table for the initial baselines
+
+Decision: Create small tracked comparison artifacts under `reports/` from audited aggregate summaries.
+
+Alternatives considered:
+
+- Leave the comparison only in `docs/RESULTS_LOG.md`.
+- Track raw prediction CSVs in Git.
+- Wait until PR-AUC is implemented before creating any table.
+
+Reasoning: A small CSV and Markdown table gives the project a stable, machine-readable and human-readable comparison without committing large raw prediction artifacts. The table is generated from audited summaries rather than manually copied from terminal output.
+
+Impact: Future model comparisons should update `reports/baseline_comparison.csv` and `reports/baseline_comparison.md` through `scripts/export_baseline_comparison.py`.
+
+Evidence available at decision time: `python -m unittest tests.test_baseline_comparison` passed. `python scripts/export_baseline_comparison.py` wrote three rows and ranked `random_forest` first by test F1 mean.
+
+## 2026-08-16: Keep detailed error examples out of Git
+
+Decision: Store detailed false-positive and false-negative examples under ignored `results/error_analysis/`, while recording aggregate conclusions in tracked documentation.
+
+Alternatives considered:
+
+- Commit the full error-analysis Markdown report.
+- Include raw product titles and descriptions directly in `docs/RESULTS_LOG.md`.
+- Avoid saving detailed examples at all.
+
+Reasoning: Error analysis needs raw product attributes to be useful locally, but those attributes are derived from downloaded benchmark data and should not be casually committed. Keeping detailed examples local preserves inspection ability while keeping the repository clean and lightweight.
+
+Impact: Future qualitative analyses should write detailed local reports under `results/error_analysis/` and summarize only aggregate, non-sensitive patterns in tracked docs.
+
+Evidence available at decision time: `python scripts/analyze_prediction_errors.py` generated JSON and Markdown reports for Random Forest seed `13`; `.gitignore` now excludes `results/error_analysis/*`.
+
+## 2026-08-16: Add Average Precision as a threshold-free diagnostic
+
+Decision: Report ranking Average Precision alongside selected-threshold F1 for the initial traditional baselines.
+
+Alternatives considered:
+
+- Continue reporting only F1, precision, and recall at the validation-selected threshold.
+- Treat the coarse threshold-grid PR-AUC as the primary PR metric.
+- Use scikit-learn metric helpers directly without project-level wrappers.
+
+Reasoning: F1 at one threshold is useful but incomplete for imbalanced entity matching. Average Precision summarizes how well positive pairs are ranked above negative pairs across the score range. The project-level implementation keeps the metric definition auditable and avoids changing dependency assumptions.
+
+Impact: Baseline comparisons should distinguish selected-threshold performance from threshold-free ranking performance. Test AP is for reporting only and must not be used to select thresholds or tune models.
+
+Evidence available at decision time: `python -m unittest tests.test_threshold_diagnostics` passed. `python scripts/export_threshold_diagnostics.py` wrote `reports/threshold_diagnostics.csv` and `reports/threshold_diagnostics.md`, ranking `random_forest` first by test Average Precision mean.

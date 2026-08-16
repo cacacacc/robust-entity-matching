@@ -92,6 +92,18 @@ def write_prediction_csv(rows: Iterable[Mapping[str, Any]], output_path: str | P
     return len(normalized_rows)
 
 
+def read_prediction_csv(path: str | Path) -> list[dict[str, Any]]:
+    """Read and validate raw prediction rows from CSV."""
+
+    with Path(path).open("r", encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if reader.fieldnames != RAW_PREDICTION_COLUMNS:
+            raise PredictionArtifactError(
+                f"Unexpected prediction columns in {path}: {reader.fieldnames}"
+            )
+        return validate_prediction_rows(reader)
+
+
 def summarize_prediction_rows(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """Summarize validated raw prediction rows without computing model metrics."""
 

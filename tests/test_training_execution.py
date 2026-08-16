@@ -28,6 +28,15 @@ class TrainingExecutionTests(unittest.TestCase):
         self.assertEqual(config["models_to_run"], ["logistic_regression"])
         self.assertTrue(config["approval"]["approved_by_user"])
 
+    def test_load_rf_svm_fit_config(self) -> None:
+        config = load_training_config(
+            PROJECT_ROOT / "configs/experiments/wdc_unseen_rf_svm_fit.json"
+        )
+
+        self.assertTrue(config["fit_allowed"])
+        self.assertEqual(config["models_to_run"], ["random_forest", "svm"])
+        self.assertTrue(config["approval"]["approved_by_user"])
+
     def test_training_config_rejects_unapproved_fit(self) -> None:
         config = {
             "experiment_id": "bad",

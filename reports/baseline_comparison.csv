@@ -1,0 +1,4 @@
+rank_by_test_f1,model_id,experiment_id,seeds,selected_thresholds,test_precision_mean,test_precision_std,test_recall_mean,test_recall_std,test_f1_mean,test_f1_std
+1,random_forest,wdc_unseen_rf_svm_fit_v1,"[13, 29, 47, 71, 101]","[0.32, 0.37, 0.4, 0.38, 0.33]",0.46980980732376343,0.019139505455088784,0.6952,0.033184333653095976,0.5598631874163362,0.0030943756168219064
+2,logistic_regression,wdc_unseen_logistic_regression_fit_v1,"[13, 29, 47, 71, 101]","[0.66, 0.66, 0.66, 0.66, 0.66]",0.45582047685834504,0.0,0.65,0.0,0.5358615004122012,0.0
+3,svm,wdc_unseen_rf_svm_fit_v1,"[13, 29, 47, 71, 101]","[0.31, 0.34, 0.32, 0.34, 0.34]",0.43678721061618153,0.004334086700824968,0.6724,0.0035777087639996667,0.5295473051367368,0.0023275127069483487
