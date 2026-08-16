@@ -1,10 +1,17 @@
 {
-  "experiment_id": "wdc_unseen_baseline_protocol",
-  "status": "protocol_locked_no_fit",
-  "purpose": "Lock the first WDC unseen baseline split and threshold-selection protocol without fitting models.",
+  "experiment_id": "wdc_unseen_logistic_regression_fit_v1",
+  "status": "fit_enabled_approved",
+  "approval": {
+    "approved_by_user": true,
+    "approval_date": "2026-08-16",
+    "approval_note": "User approved the first real baseline run."
+  },
+  "source_protocol_config": "configs/experiments/wdc_unseen_baseline_protocol.json",
+  "purpose": "Run the first approved traditional baseline with Logistic Regression only.",
   "dataset_config": "configs/datasets/wdc_products_80pair.json",
   "model_config": "configs/models/baseline_traditional.json",
   "processed_root": "data/processed",
+  "results_root": "results",
   "splits": {
     "train": "train_small",
     "validation": "valid_small",
@@ -20,7 +27,7 @@
     "require_record_disjoint": true,
     "require_entity_disjoint": false,
     "known_entity_overlap_allowed": true,
-    "known_entity_overlap_reason": "The official WDC train_small and valid_small splits have entity overlap. Validation may be used for threshold selection, but this protocol must not claim train-validation entity disjointness."
+    "known_entity_overlap_reason": "The official WDC train_small and valid_small splits have entity overlap. Validation may be used for threshold selection, but this run must not claim train-validation entity disjointness."
   },
   "threshold_selection": {
     "split_role": "validation",
@@ -38,16 +45,7 @@
     "report_test_once_per_seed": true
   },
   "random_seeds": [13, 29, 47, 71, 101],
-  "fit_allowed": false,
-  "fit_blockers": [
-    "This config locks protocol decisions only; it is not a fit-enabled run config.",
-    "A fit-enabled run config has not been created or approved.",
-    "Training execution and real project prediction generation remain blocked."
-  ],
-  "planned_models": [
-    "logistic_regression",
-    "random_forest",
-    "svm"
-  ],
-  "notes": "Unseen-entity claims are allowed only for the final test split because test_unseen_100un is pair-, record-, and entity-disjoint from both development splits."
+  "models_to_run": ["logistic_regression"],
+  "fit_allowed": true,
+  "notes": "This approved run is intentionally limited to Logistic Regression to keep the first baseline small and auditable."
 }

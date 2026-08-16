@@ -1,6 +1,6 @@
 {
   "config_id": "baseline_traditional_v1",
-  "status": "draft_not_trained",
+  "status": "draft_with_first_logistic_run",
   "purpose": "Define planned traditional baseline model families without fitting or tuning models yet.",
   "feature_table_schema_version": "feature_table_v1",
   "text_standardization_version": "text_standardization_v1",
@@ -14,13 +14,13 @@
     {
       "model_id": "logistic_regression",
       "family": "LogisticRegression",
-      "status": "planned",
+      "status": "first_run_completed",
       "parameters": {
         "max_iter": 1000,
         "class_weight": "balanced",
         "solver": "liblinear"
       },
-      "notes": "Initial baseline parameters for small tabular feature sets. Not trained yet."
+      "notes": "Initial baseline parameters for small tabular feature sets. First approved WDC unseen run completed in wdc_unseen_logistic_regression_fit_v1."
     },
     {
       "model_id": "random_forest",
@@ -48,5 +48,5 @@
       "notes": "Initial linear SVM baseline. Random seed must be set by the training runner."
     }
   ],
-  "training_status": "not_started"
+  "training_status": "logistic_regression_first_run_completed"
 }

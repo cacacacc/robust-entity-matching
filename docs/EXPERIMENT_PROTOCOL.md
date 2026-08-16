@@ -288,6 +288,13 @@ Current model config:
 
 - `configs/models/baseline_traditional.json`
 
+Approved first run config:
+
+- `configs/experiments/wdc_unseen_logistic_regression_fit.json`
+- Model: `logistic_regression` only.
+- Status: completed.
+- Result log: `docs/RESULTS_LOG.md`.
+
 Current training guard:
 
 - Dry-run experiment config `configs/experiments/wdc_unseen_baseline_dry_run.json` is rejected by the training guard because `fit_allowed` is `false`.
@@ -336,15 +343,29 @@ Current implemented metric primitives:
 - `f1_score`.
 - `evaluate_binary_scores`: returns threshold, class counts, confusion matrix, precision, recall, and F1.
 
+Raw prediction artifact planning:
+
+- Schema version: `raw_predictions_v1`.
+- Planned location: `results/predictions/<experiment_id>/<model_id>/seed_<seed>/<split_role>.csv`.
+- Required columns: `schema_version`, `experiment_id`, `model_id`, `seed`, `split_role`, `split`, `pair_id`, `y_true`, `score`, `threshold`, `y_pred`.
+- Current helper module: `src/entity_matching/evaluation/predictions.py`.
+- Current status: schema validation and toy-file tests exist; no real project prediction files have been generated.
+
+Run-plan preview:
+
+- Script: `scripts/preview_baseline_run_plan.py`.
+- The preview validates the protocol, matrices, model definitions, seed schedule, and planned raw prediction paths.
+- The preview reports `ready_to_execute_training: false` and does not train or predict.
+
 Not implemented yet:
 
 - PR-AUC;
 - calibration metrics;
 - runtime measurement;
 - mean and standard deviation across seeds;
-- saved prediction files.
+- additional model runs for Random Forest and SVM.
 
-Metric code currently uses toy scores only. It must not be reported as experimental performance.
+Metric code has now been used for the first approved Logistic Regression baseline. Results must be interpreted under the locked WDC unseen protocol and the limitations recorded in `docs/RESULTS_LOG.md`.
 
 ## Fair Comparison Rules
 

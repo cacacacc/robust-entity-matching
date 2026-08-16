@@ -351,3 +351,35 @@ Reasoning: `valid_small` has entity overlap with `train_small`, so it cannot sup
 Impact: Thresholds must be selected on `valid_small` only. The test split must not be used for threshold selection or model selection. The first fit-enabled config may be created only after training code can save raw predictions and the user explicitly approves the first actual baseline run.
 
 Evidence available at decision time: `python -m unittest tests.test_experiment_protocol` passed. `scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json` confirmed zero pair, record, and entity overlap for both train-to-test and validation-to-test comparisons, while reporting 500 entity overlaps between `train_small` and `valid_small`.
+
+## 2026-08-16: Add run-plan and raw prediction schema before training execution
+
+Decision: Implement a baseline run-plan preview and raw prediction artifact schema before adding any training execution code.
+
+Alternatives considered:
+
+- Add the first executable training script immediately.
+- Let each model write predictions in its own ad hoc format.
+- Defer prediction artifact design until after seeing model results.
+
+Reasoning: Raw predictions are needed for reproducibility, threshold auditing, error analysis, and later result aggregation. Defining the schema before training prevents accidental result files with missing pair IDs, seeds, thresholds, or split roles. A run-plan preview verifies what would be executed while keeping `fit_allowed: false`.
+
+Impact: Future training code should write `raw_predictions_v1` CSV files under the planned paths. The run-plan remains non-executing: it validates matrices, guards, model definitions, seed schedule, and artifact locations but does not train or predict.
+
+Evidence available at decision time: `python -m unittest tests.test_prediction_artifacts tests.test_baseline_run_plan` passed. `scripts/preview_baseline_run_plan.py configs/experiments/wdc_unseen_baseline_protocol.json --model logistic_regression` reported `fit_allowed: false`, `ready_to_execute_training: false`, unfitted estimators, 24 feature columns, and planned validation/test raw prediction paths.
+
+## 2026-08-16: Run the first approved Logistic Regression baseline
+
+Decision: Execute only the first approved Logistic Regression baseline under the locked WDC unseen protocol.
+
+Alternatives considered:
+
+- Run all planned traditional baselines immediately.
+- Run Random Forest and SVM before auditing the first Logistic Regression result.
+- Save trained model artifacts.
+
+Reasoning: The user explicitly approved the first real baseline run. Keeping the run to Logistic Regression makes the first result small, fast, and auditable. Saving raw predictions and summaries is enough for reproducibility and error analysis at this point; saved model artifacts can be added later if needed.
+
+Impact: The project now has one real baseline result. Random Forest and SVM remain unrun. The first result should be audited before expanding to additional models.
+
+Evidence available at decision time: `python scripts/run_approved_baseline.py configs/experiments/wdc_unseen_logistic_regression_fit.json` completed successfully. Five seeds produced selected threshold `0.66`, test F1 mean `0.5358615004122012`, precision mean `0.45582047685834504`, recall mean `0.65`, and standard deviation `0.0` for these metrics.

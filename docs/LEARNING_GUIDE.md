@@ -476,3 +476,93 @@ python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_ba
 
 对应实验结果：
 暂未产生。当前只是锁定和验证实验协议，没有训练模型、没有预测文件、没有 test metrics。
+
+## 17. raw prediction artifact 和 run plan
+
+英文术语：Raw Prediction Artifact / Run Plan
+
+raw prediction artifact 是模型将来对每一个 pair 的原始输出记录。它不是只保存一个最终 F1 分数，而是保存每一行：
+
+- 这是哪个 experiment；
+- 哪个 model；
+- 哪个 seed；
+- 哪个 split；
+- 哪个 pair；
+- 真实标签是什么；
+- 模型分数是多少；
+- 用的 threshold 是多少；
+- 最后预测成 `match` 还是 `non-match`。
+
+为什么要先设计它：
+如果只保存最终平均分，后面很难检查错误来自哪里，也很难复现实验。raw predictions 让我们可以回头做 error analysis，比如看看模型是不是经常把相似但不同容量的商品误判成 match。
+
+run plan 是“训练前清单”。它会告诉我们将来要跑哪些 model、哪些 seed、哪些 split，以及预测文件会保存到哪里。但当前 run plan 不执行训练，也不产生真实预测。
+
+关键点：
+
+```text
+run plan != training run
+prediction schema != prediction result
+```
+
+对应代码路径：
+
+- `src/entity_matching/evaluation/predictions.py`
+- `src/entity_matching/experiments/run_plan.py`
+- `scripts/preview_baseline_run_plan.py`
+- `tests/test_prediction_artifacts.py`
+- `tests/test_baseline_run_plan.py`
+
+当前验证命令：
+
+```powershell
+python scripts/preview_baseline_run_plan.py configs/experiments/wdc_unseen_baseline_protocol.json --model logistic_regression
+```
+
+对应实验结果：
+暂未产生。当前只是预览计划和验证 schema，没有训练模型、没有保存真实 prediction CSV。
+
+## 18. 第一轮 Logistic Regression baseline 结果
+
+这一步是真正的第一轮模型训练。
+
+我们只跑了 `logistic_regression`，没有跑 Random Forest 和 SVM。原因是第一轮结果需要先小而清楚，方便检查协议、预测文件和指标计算有没有问题。
+
+数据使用方式：
+
+- `train_small`：训练；
+- `valid_small`：选择 threshold；
+- `test_unseen_100un`：最终测试。
+
+最终选择的 threshold 是 `0.66`。五个 seed 都得到一样的 threshold 和 test 结果，这是因为当前 Logistic Regression 配置基本是确定性的。
+
+test 结果：
+
+- precision mean: `0.45582047685834504`；
+- recall mean: `0.65`；
+- F1 mean: `0.5358615004122012`；
+- F1 std: `0.0`。
+
+混淆矩阵：
+
+```text
+tp = 325
+fp = 388
+tn = 3612
+fn = 175
+```
+
+怎么理解：
+
+- recall `0.65` 表示 500 个真实 match 里找到了 325 个；
+- precision 约 `0.456` 表示预测为 match 的 pair 里，不到一半是真的 match；
+- 这说明当前简单 string-similarity + Logistic Regression baseline 还能抓到一部分 match，但误报比较多。
+
+重要限制：
+这个结果只代表第一轮传统 baseline。它还不能说明 Random Forest、SVM、hard-negative 策略或 class-ratio 实验的结论。
+
+对应结果记录：
+
+- `docs/RESULTS_LOG.md`
+- `results/summaries/wdc_unseen_logistic_regression_fit_v1/aggregate.json`
+- `results/predictions/wdc_unseen_logistic_regression_fit_v1/`

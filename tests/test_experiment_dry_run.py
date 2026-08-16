@@ -68,7 +68,10 @@ class ExperimentDryRunTests(unittest.TestCase):
         )
 
         self.assertFalse(summary["ready_for_fit"])
-        self.assertEqual(summary["planned_training_status"], "not_started")
+        self.assertEqual(
+            summary["planned_training_status"],
+            "logistic_regression_first_run_completed",
+        )
         self.assertEqual(
             summary["matrix_summary"]["splits"]["train_small"]["row_count"], 2500
         )

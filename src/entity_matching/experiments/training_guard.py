@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Mapping
-
-from entity_matching.experiments.dry_run import load_experiment_config
 
 
 class TrainingNotAllowedError(PermissionError):
@@ -26,5 +25,6 @@ def assert_fit_allowed(experiment_config: Mapping[str, Any]) -> None:
 def assert_fit_allowed_from_config(config_path: str | Path) -> None:
     """Load an experiment config and assert fitting is explicitly allowed."""
 
-    config = load_experiment_config(config_path)
+    with Path(config_path).open("r", encoding="utf-8") as file:
+        config = json.load(file)
     assert_fit_allowed(config)

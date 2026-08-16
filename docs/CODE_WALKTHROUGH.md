@@ -707,3 +707,87 @@ python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_ba
 
 当前用途：
 确认第一轮 baseline 的实验规则已经可以被代码检查，而不只是写在文档里。
+
+## `src/entity_matching/evaluation/predictions.py`
+
+文件职责：
+定义 raw prediction CSV 的 schema、路径规则和写入前验证规则。
+
+当前 schema：
+
+- schema version: `raw_predictions_v1`；
+- 必要字段：`experiment_id`、`model_id`、`seed`、`split_role`、`split`、`pair_id`、`y_true`、`score`、`threshold`、`y_pred`；
+- `split_role` 当前只允许 `validation` 或 `test`；
+- `score` 和 `threshold` 必须在 `[0.0, 1.0]`。
+
+注意：
+当前测试只写 toy predictions 到临时目录，不会生成项目实验结果。
+
+## `src/entity_matching/experiments/run_plan.py`
+
+文件职责：
+生成 baseline run plan，但不训练、不预测、不写结果。
+
+它会检查：
+
+- protocol config；
+- train/validation/test feature matrices；
+- split guards；
+- model config；
+- random seed schedule；
+- planned raw prediction output paths。
+
+关键输出：
+
+- `fit_allowed: false`；
+- `ready_to_execute_training: false`；
+- 每个 estimator 的 `is_fitted: false`。
+
+## `scripts/preview_baseline_run_plan.py`
+
+文件职责：
+命令行预览 baseline run plan。
+
+示例：
+
+```powershell
+python scripts/preview_baseline_run_plan.py configs/experiments/wdc_unseen_baseline_protocol.json --model logistic_regression
+```
+
+## `configs/experiments/wdc_unseen_logistic_regression_fit.json`
+
+文件职责：
+记录用户批准后的第一轮真实 baseline run。它只运行 `logistic_regression`，不运行 Random Forest 或 SVM。
+
+关键字段：
+
+- `status: fit_enabled_approved`；
+- `approval.approved_by_user: true`；
+- `models_to_run: ["logistic_regression"]`；
+- `fit_allowed: true`。
+
+## `src/entity_matching/experiments/training.py`
+
+文件职责：
+执行被明确批准的 baseline training。
+
+它会：
+
+- 验证用户批准和 `fit_allowed`；
+- 重新检查 train/validation/test guards；
+- 加载 model-ready matrices；
+- 训练 Logistic Regression；
+- 在 validation 上选择 threshold；
+- 在 test 上做最终评估；
+- 写出 raw prediction CSV 和 summary JSON。
+
+## `scripts/run_approved_baseline.py`
+
+文件职责：
+命令行执行已批准的 baseline run。
+
+示例：
+
+```powershell
+python scripts/run_approved_baseline.py configs/experiments/wdc_unseen_logistic_regression_fit.json
+```

@@ -23,7 +23,9 @@ class ModelFactoryTests(unittest.TestCase):
     def test_load_model_config(self) -> None:
         config = load_model_config(PROJECT_ROOT / "configs/models/baseline_traditional.json")
 
-        self.assertEqual(config["training_status"], "not_started")
+        self.assertEqual(
+            config["training_status"], "logistic_regression_first_run_completed"
+        )
         self.assertEqual(len(config["models"]), 3)
 
     def test_instantiate_logistic_regression_without_fitting(self) -> None:
@@ -62,6 +64,12 @@ class ModelFactoryTests(unittest.TestCase):
             assert_fit_allowed_from_config(
                 PROJECT_ROOT / "configs/experiments/wdc_unseen_baseline_dry_run.json"
             )
+
+    def test_training_guard_accepts_approved_fit_config(self) -> None:
+        assert_fit_allowed_from_config(
+            PROJECT_ROOT
+            / "configs/experiments/wdc_unseen_logistic_regression_fit.json"
+        )
 
 
 if __name__ == "__main__":

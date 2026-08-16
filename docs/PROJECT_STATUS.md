@@ -77,6 +77,15 @@ Phase 3: Traditional Baseline Modeling. Entered after Phase 2 reproducibility au
 - Implemented protocol validation utilities that check train/validation guard expectations and strict development-to-test isolation.
 - Confirmed `test_unseen_100un` is pair-, record-, and entity-disjoint from both `train_small` and `valid_small`.
 - Confirmed `valid_small` may be used for threshold selection, but the project must not claim train-validation entity disjointness.
+- Implemented raw prediction artifact schema `raw_predictions_v1` and validation helpers.
+- Implemented a baseline run-plan preview that validates protocol, matrices, model instantiation, seeds, and planned prediction paths without fitting or predicting.
+- User approved the first real baseline run on 2026-08-16.
+- Created fit-enabled config `configs/experiments/wdc_unseen_logistic_regression_fit.json` for Logistic Regression only.
+- Implemented guarded training execution in `src/entity_matching/experiments/training.py`.
+- Ran the first approved Logistic Regression baseline on WDC Products `train_small` / `valid_small` / `test_unseen_100un`.
+- Saved raw validation and test predictions under ignored `results/predictions/wdc_unseen_logistic_regression_fit_v1/`.
+- Saved per-seed and aggregate summaries under ignored `results/summaries/wdc_unseen_logistic_regression_fit_v1/`.
+- Recorded the first baseline result in `docs/RESULTS_LOG.md`.
 
 ## Verification Results
 
@@ -100,12 +109,14 @@ Phase 3: Traditional Baseline Modeling. Entered after Phase 2 reproducibility au
 - CompERBench `abt-buy` must not be used for unseen-entity claims under its official split.
 - A third product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, remains optional after the first ingestion pipeline works.
 - Standardized interim JSONL files have been generated under `data/interim/`; they are intentionally ignored by Git and can be regenerated.
-- Phase 3 model factory and protocol scaffolding exist, but no model fitting/training, predictions, saved models, or experiment results have been produced yet.
+- Logistic Regression has completed the first approved WDC unseen baseline run.
+- Random Forest and SVM have not been trained yet.
+- No saved model artifacts have been produced; only raw prediction CSVs and JSON summaries were generated under ignored `results/`.
 - Quality reports are currently printed to stdout only; they are not saved as result artifacts yet.
 
 ## Next Milestone
 
-Next milestone: implement the first training runner skeleton with raw prediction persistence, while keeping `fit_allowed` blocked until the user explicitly approves the first actual baseline run.
+Next milestone: audit the first Logistic Regression result, then decide whether to run Random Forest and SVM under the same locked protocol.
 
 ## Key Commands
 
@@ -145,6 +156,10 @@ python -m unittest tests.test_model_factory
 python scripts/preview_model_factory.py configs/models/baseline_traditional.json --seed 13
 python -m unittest tests.test_experiment_protocol
 python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json
+python -m unittest tests.test_prediction_artifacts tests.test_baseline_run_plan
+python scripts/preview_baseline_run_plan.py configs/experiments/wdc_unseen_baseline_protocol.json --model logistic_regression
+python -m unittest tests.test_training_execution
+python scripts/run_approved_baseline.py configs/experiments/wdc_unseen_logistic_regression_fit.json
 ```
 
 ## Latest Phase 1 Sources Checked
