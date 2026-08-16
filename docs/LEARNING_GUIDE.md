@@ -392,3 +392,87 @@ score < threshold  -> predict non-match
 - `scripts/preview_threshold_metrics.py`
 
 对应实验结果：暂未产生。当前只用 toy scores 测试评估逻辑。
+
+## 15. model factory 和 training guard
+
+英文术语：Model Factory / Training Guard
+
+定义：
+
+- model factory：根据配置创建模型对象；
+- training guard：在真正调用 `fit()` 前检查当前配置是否允许训练。
+
+为什么需要：进入 Phase 3 后，我们要开始接触模型代码，但不能让模型训练不小心提前发生。现在 validation 和 threshold protocol 还没有锁定，所以训练必须继续被挡住。
+
+当前支持创建但不训练的模型：
+
+- Logistic Regression；
+- Random Forest；
+- linear SVM。
+
+关键点：
+
+```text
+instantiate estimator != fit model
+```
+
+创建 estimator 只是检查配置和依赖能不能工作；`fit()` 才是真正训练。
+
+常见误区：本地有 `sklearn` 不代表现在可以训练。训练必须等实验配置显式设置 `fit_allowed: true`。
+
+对应代码路径：
+
+- `src/entity_matching/models/factory.py`
+- `src/entity_matching/experiments/training_guard.py`
+- `scripts/preview_model_factory.py`
+- `tests/test_model_factory.py`
+
+对应实验结果：暂未产生。当前只是 model factory preview。
+
+## 16. validation protocol 和 test isolation
+
+英文术语：Validation Protocol / Test Isolation
+
+定义：
+validation protocol 是实验中规定“哪个数据 split 可以用来做什么”的规则。test isolation 是指最终测试集必须和开发阶段用到的数据隔离，不能被训练、调 threshold 或选模型污染。
+
+本项目当前锁定的第一轮规则是：
+
+- `train_small`：以后训练模型；
+- `valid_small`：以后选择 threshold；
+- `test_unseen_100un`：以后最终评估。
+
+为什么不能直接用 test 选 threshold：
+如果模型输出一个分数，比如 `0.73`，我们还需要选一个 threshold，把分数变成 `match` 或 `non-match`。如果用 test set 来挑这个 threshold，就等于提前看了考试答案。最后的 test 分数会偏乐观，科研上不干净。
+
+为什么 `valid_small` 可以用，但要谨慎解释：
+我们检查到 `train_small` 和 `valid_small` 之间有 500 个 entity overlap。所以它不是 entity-disjoint validation。它可以作为开发用 validation，帮助选择 threshold，但不能作为“模型能泛化到全新实体”的证据。
+
+真正支持 unseen-entity claim 的是：
+
+```text
+train_small -> test_unseen_100un: pair/record/entity overlap = 0
+valid_small -> test_unseen_100un: pair/record/entity overlap = 0
+```
+
+直观理解：
+
+- validation 是练习考试，用来定规则；
+- test 是正式考试，只能规则定好后再看；
+- 如果用正式考试来定规则，结果就不再可信。
+
+对应代码路径：
+
+- `configs/experiments/wdc_unseen_baseline_protocol.json`
+- `src/entity_matching/experiments/protocol.py`
+- `scripts/validate_experiment_protocol.py`
+- `tests/test_experiment_protocol.py`
+
+当前验证命令：
+
+```powershell
+python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json
+```
+
+对应实验结果：
+暂未产生。当前只是锁定和验证实验协议，没有训练模型、没有预测文件、没有 test metrics。

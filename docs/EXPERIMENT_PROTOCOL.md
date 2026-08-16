@@ -1,6 +1,6 @@
 # Experiment Protocol
 
-Status: Draft. This protocol is not locked.
+Status: Draft overall. The first WDC unseen baseline split and threshold protocol is locked as protocol-only, with model fitting still disabled.
 
 ## Audit-Derived Constraints
 
@@ -93,9 +93,26 @@ Do not claim CompERBench supports entity-disjoint splitting until actual record/
 
 Local inspection found duplicate pairs and substantial source/target ID overlap across `abt-buy` official train/validation/test splits. Therefore `abt-buy` should be treated as a fixed-split baseline dataset only unless a custom split is later designed and validated.
 
+First WDC unseen baseline protocol:
+
+- Config: `configs/experiments/wdc_unseen_baseline_protocol.json`.
+- Train split: `train_small`.
+- Validation split: `valid_small`.
+- Final test split: `test_unseen_100un`.
+- Train/validation rule: require pair and record disjointness; acknowledge known entity overlap and do not claim train-validation entity disjointness.
+- Development/test rule: require pair, record, and entity disjointness for `train_small` versus `test_unseen_100un` and for `valid_small` versus `test_unseen_100un`.
+
 ## Random Seeds
 
-Planned minimum: five random seeds. Exact seed values are not locked yet.
+Initial locked seed schedule for the first WDC unseen baseline protocol:
+
+- `13`
+- `29`
+- `47`
+- `71`
+- `101`
+
+These seeds apply to model initialization and sampling decisions once fitting is explicitly enabled.
 
 ## Features
 
@@ -223,6 +240,34 @@ Current local dependency status from dry-run:
 
 Availability does not imply permission to train. Fitting remains blocked until the protocol explicitly allows it.
 
+## Baseline Protocol Validation
+
+The first protocol-only config now validates the experimental roles without fitting:
+
+- Config: `configs/experiments/wdc_unseen_baseline_protocol.json`.
+- Status: `protocol_locked_no_fit`.
+- Fit allowed: `false`.
+- Threshold selection split: validation only.
+- Threshold selection metric: F1.
+- Candidate threshold grid: `0.00` to `1.00` in steps of `0.01`.
+- Test split cannot be used for threshold selection.
+- Test split cannot be used for model selection.
+- Test results should be reported once per seed after validation decisions are fixed.
+
+Guard validation command:
+
+```powershell
+python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json
+```
+
+Current validated guard facts:
+
+- `train_small` versus `valid_small`: zero pair overlap, zero record overlap, 500 entity overlap.
+- `train_small` versus `test_unseen_100un`: zero pair, record, and entity overlap.
+- `valid_small` versus `test_unseen_100un`: zero pair, record, and entity overlap.
+
+Interpretation: `valid_small` can be used for threshold selection, but it must not be described as an entity-disjoint validation split. The final unseen-entity claim is attached only to `test_unseen_100un`.
+
 ## Models
 
 Planned traditional baselines:
@@ -231,7 +276,23 @@ Planned traditional baselines:
 - Random Forest.
 - SVM.
 
-Hyperparameters are not locked yet.
+Initial model factory support exists for:
+
+- `logistic_regression`: sklearn `LogisticRegression`, `class_weight="balanced"`, `solver="liblinear"`, `max_iter=1000`.
+- `random_forest`: sklearn `RandomForestClassifier`, `n_estimators=100`, `class_weight="balanced"`, `n_jobs=1`, seed injected by runner.
+- `svm`: sklearn `SVC`, linear kernel, `class_weight="balanced"`, `probability=true`, seed injected by runner.
+
+These estimators can be instantiated but must not be fitted unless an experiment config explicitly sets `fit_allowed: true`.
+
+Current model config:
+
+- `configs/models/baseline_traditional.json`
+
+Current training guard:
+
+- Dry-run experiment config `configs/experiments/wdc_unseen_baseline_dry_run.json` is rejected by the training guard because `fit_allowed` is `false`.
+
+Hyperparameters are initial scaffolding values, not final tuned settings.
 
 ## Threshold Selection
 
@@ -245,6 +306,13 @@ Current threshold-selection scaffold:
 - Threshold selection refuses any split name other than `validation`.
 - Default candidate thresholds are `0.00` through `1.00` in steps of `0.01`.
 - No project model scores exist yet, so this scaffold has only been tested with toy scores.
+
+For the first WDC unseen baseline protocol, threshold selection is locked to:
+
+- split role: `validation`;
+- concrete split: `valid_small`;
+- metric: F1;
+- candidate thresholds: `0.00` to `1.00` with step `0.01`.
 
 ## Metrics
 

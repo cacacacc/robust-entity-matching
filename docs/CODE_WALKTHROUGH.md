@@ -572,6 +572,53 @@ python scripts/dry_run_baseline_protocol.py configs/experiments/wdc_unseen_basel
 
 记录第一轮 WDC unseen baseline 的训练前协议。当前只允许 dry-run，不允许 fit。
 
+## `src/entity_matching/models/factory.py`
+
+文件职责：
+
+从 `configs/models/baseline_traditional.json` 实例化 traditional baseline estimators，但不 fit。
+
+主要函数：
+
+- `load_model_config(path)`：读取 model config。
+- `get_model_definition(model_config, model_id)`：查找一个 model definition。
+- `instantiate_model(model_definition, random_seed)`：创建 sklearn estimator。
+- `instantiate_model_from_config(config_path, model_id, random_seed)`：从 config 直接创建 estimator。
+- `describe_estimator(estimator)`：返回 estimator class、module、parameters 和 `is_fitted`。
+
+支持的 model families：
+
+- `LogisticRegression`
+- `RandomForestClassifier`
+- `SupportVectorMachine`，对应 sklearn `SVC`
+
+## `src/entity_matching/experiments/training_guard.py`
+
+文件职责：
+
+在任何训练入口调用 `fit()` 前检查实验配置是否允许训练。
+
+主要函数：
+
+- `assert_fit_allowed(experiment_config)`
+- `assert_fit_allowed_from_config(config_path)`
+
+当前行为：
+
+- `configs/experiments/wdc_unseen_baseline_dry_run.json` 会被拒绝训练，因为 `fit_allowed` 是 `false`。
+
+## `scripts/preview_model_factory.py`
+
+文件职责：
+
+预览 baseline estimators 的配置和 fitted 状态，不训练模型。
+
+示例：
+
+```powershell
+python scripts/preview_model_factory.py configs/models/baseline_traditional.json --seed 13
+```
+
 ## `src/entity_matching/evaluation/metrics.py`
 
 文件职责：
@@ -614,3 +661,49 @@ python scripts/dry_run_baseline_protocol.py configs/experiments/wdc_unseen_basel
 文件职责：
 
 用 toy scores 演示 metric 和 threshold-selection 输出格式。它不读取项目预测，也不产生实验结果。
+
+## `configs/experiments/wdc_unseen_baseline_protocol.json`
+
+文件职责：
+锁定第一轮 WDC unseen baseline 的 split 角色和 threshold-selection 规则，但仍然不允许训练模型。
+
+当前 split 角色：
+
+- `train_small`：训练 split；
+- `valid_small`：validation split，只用于选择 threshold；
+- `test_unseen_100un`：最终 test split，只用于最终评估。
+
+关键限制：
+
+- `fit_allowed` 仍然是 `false`；
+- test split 不能用于 threshold selection；
+- test split 不能用于 model selection；
+- `train_small` 和 `valid_small` 有已知 entity overlap，所以不能声称 train-validation entity-disjoint；
+- `test_unseen_100un` 必须同时和 train、validation 保持 pair、record、entity disjoint。
+
+## `src/entity_matching/experiments/protocol.py`
+
+文件职责：
+在真正训练模型之前，验证 protocol-only experiment config 是否安全。
+
+主要函数：
+
+- `load_protocol_config(path)`：读取并验证 protocol config；
+- `validate_protocol_config(config)`：检查字段、split 角色、threshold selection、test-use policy 和 random seeds；
+- `validate_protocol_guards(config_path)`：运行 split guard，确认 development splits 和 test split 之间没有 pair、record、entity leakage。
+
+这个模块不会调用 `fit()`，也不会生成预测或实验结果。
+
+## `scripts/validate_experiment_protocol.py`
+
+文件职责：
+命令行验证 protocol-only config，并输出 guard summary。
+
+示例：
+
+```powershell
+python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json
+```
+
+当前用途：
+确认第一轮 baseline 的实验规则已经可以被代码检查，而不只是写在文档里。

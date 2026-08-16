@@ -319,3 +319,35 @@ Reasoning: Phase 2 created many data contracts and generated artifacts. A writte
 Impact: Phase 3 should start only after the user explicitly approves model implementation and the validation/threshold-selection protocol is clarified. Training code should refuse to run while `fit_allowed` remains false.
 
 Evidence available at decision time: `python -m unittest discover tests` passed 52 tests; WDC `train_small` versus `test_unseen_100un` passed strict pair/record/entity guards; dry-run baseline protocol returned `ready_for_fit: false`; `results/` and `reports/` contained only `.gitkeep`; code scan found no `.fit(`, `.predict(`, `predict_proba`, `joblib`, or `pickle` training artifacts.
+
+## 2026-08-15: Start Phase 3 with model factory and training guards, not fitting
+
+Decision: Enter Phase 3 by adding sklearn estimator factory utilities and explicit training guards, while keeping all model fitting blocked.
+
+Alternatives considered:
+
+- Fit the first Logistic Regression model immediately.
+- Keep model configs abstract without instantiating sklearn estimators.
+- Add training code before a guard that enforces `fit_allowed`.
+
+Reasoning: The user approved entering Phase 3, but the validation/threshold protocol remains unresolved. Instantiating unfitted estimators is a safe first modeling step: it verifies dependencies and configuration shape without creating predictions or results. A training guard prevents accidental fitting from dry-run configs.
+
+Impact: Future training code must call the training guard before `fit()`. A fit-enabled config should be created only after validation/threshold protocol decisions are explicit.
+
+Evidence available at decision time: `python -m unittest discover tests` passed 57 tests. `scripts/preview_model_factory.py configs/models/baseline_traditional.json --seed 13` instantiated Logistic Regression, Random Forest, and SVM estimators and reported `is_fitted: false` for all.
+
+## 2026-08-16: Lock the first WDC unseen baseline protocol without fitting
+
+Decision: Use WDC Products `train_small` for training, `valid_small` for threshold selection, and `test_unseen_100un` for final unseen-entity evaluation in the first traditional-baseline protocol. Keep `fit_allowed: false`.
+
+Alternatives considered:
+
+- Delay protocol locking until a new entity-disjoint validation split is generated.
+- Use `test_unseen_100un` for threshold selection.
+- Claim the official small train/validation/test trio is fully entity-disjoint.
+
+Reasoning: `valid_small` has entity overlap with `train_small`, so it cannot support a train-validation entity-disjoint claim. However, it is still a legitimate development split for threshold selection as long as this limitation is explicit. The final unseen claim is protected because `test_unseen_100un` has zero pair, record, and entity overlap with both development splits.
+
+Impact: Thresholds must be selected on `valid_small` only. The test split must not be used for threshold selection or model selection. The first fit-enabled config may be created only after training code can save raw predictions and the user explicitly approves the first actual baseline run.
+
+Evidence available at decision time: `python -m unittest tests.test_experiment_protocol` passed. `scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json` confirmed zero pair, record, and entity overlap for both train-to-test and validation-to-test comparisons, while reporting 500 entity overlaps between `train_small` and `valid_small`.

@@ -2,7 +2,7 @@
 
 ## Current Phase
 
-Phase 2: Data Ingestion and Data Contract. Implementation-complete pending user approval to enter Phase 3.
+Phase 3: Traditional Baseline Modeling. Entered after Phase 2 reproducibility audit; model fitting is still blocked until protocol approval.
 
 ## Completed Work
 
@@ -67,6 +67,16 @@ Phase 2: Data Ingestion and Data Contract. Implementation-complete pending user 
 - Added `scripts/preview_threshold_metrics.py` with toy scores only; it does not use model predictions or project experiment results.
 - Completed Phase 2 reproducibility audit in `docs/PHASE_2_REPRODUCIBILITY_AUDIT.md`.
 - Confirmed no model fitting, prediction generation, result reporting, or saved model artifacts have been produced.
+- Entered Phase 3 after explicit user approval.
+- Added concrete initial parameters to `configs/models/baseline_traditional.json` for Logistic Regression, Random Forest, and linear SVM.
+- Implemented model factory utilities that instantiate sklearn estimators without fitting them.
+- Implemented training guard utilities that reject dry-run configs where `fit_allowed` is not explicitly `true`.
+- Added `scripts/preview_model_factory.py` to inspect configured estimators and confirm they are not fitted.
+- Locked the first WDC unseen baseline protocol without enabling model fitting.
+- Added `configs/experiments/wdc_unseen_baseline_protocol.json` with train, validation, test, threshold-selection, test-use, and seed rules.
+- Implemented protocol validation utilities that check train/validation guard expectations and strict development-to-test isolation.
+- Confirmed `test_unseen_100un` is pair-, record-, and entity-disjoint from both `train_small` and `valid_small`.
+- Confirmed `valid_small` may be used for threshold selection, but the project must not claim train-validation entity disjointness.
 
 ## Verification Results
 
@@ -90,12 +100,12 @@ Phase 2: Data Ingestion and Data Contract. Implementation-complete pending user 
 - CompERBench `abt-buy` must not be used for unseen-entity claims under its official split.
 - A third product dataset, such as `amazon-google` or `products (Walmart-Amazon)`, remains optional after the first ingestion pipeline works.
 - Standardized interim JSONL files have been generated under `data/interim/`; they are intentionally ignored by Git and can be regenerated.
-- Text standardization, initial string-similarity feature primitives, full processed feature-table generation, split guard reporting, model-ready matrix loading, dry-run baseline protocol checks, and metric/threshold scaffolding exist, but no custom splitting module, model fitting/training, predictions, or experiments have been implemented yet.
+- Phase 3 model factory and protocol scaffolding exist, but no model fitting/training, predictions, saved models, or experiment results have been produced yet.
 - Quality reports are currently printed to stdout only; they are not saved as result artifacts yet.
 
 ## Next Milestone
 
-Next milestone: decide whether to enter Phase 3 model implementation. Do not fit models until explicitly approved and the validation/threshold protocol is made explicit.
+Next milestone: implement the first training runner skeleton with raw prediction persistence, while keeping `fit_allowed` blocked until the user explicitly approves the first actual baseline run.
 
 ## Key Commands
 
@@ -131,6 +141,10 @@ python scripts/dry_run_baseline_protocol.py configs/experiments/wdc_unseen_basel
 python -m unittest tests.test_evaluation_metrics
 python scripts/preview_threshold_metrics.py
 Get-Content docs/PHASE_2_REPRODUCIBILITY_AUDIT.md
+python -m unittest tests.test_model_factory
+python scripts/preview_model_factory.py configs/models/baseline_traditional.json --seed 13
+python -m unittest tests.test_experiment_protocol
+python scripts/validate_experiment_protocol.py configs/experiments/wdc_unseen_baseline_protocol.json
 ```
 
 ## Latest Phase 1 Sources Checked
