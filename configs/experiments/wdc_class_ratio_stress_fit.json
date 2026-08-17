@@ -1,0 +1,64 @@
+{
+  "experiment_id": "wdc_class_ratio_stress_fit_v1",
+  "status": "fit_enabled_approved",
+  "approval": {
+    "approved_by_user": true,
+    "approval_date": "2026-08-16",
+    "approval_note": "User approved real class-ratio stress-test training."
+  },
+  "source_protocol_config": "configs/experiments/wdc_class_ratio_stress_protocol.json",
+  "purpose": "Run the approved class-ratio stress test under the locked WDC unseen protocol.",
+  "dataset_config": "configs/datasets/wdc_products_80pair.json",
+  "model_config": "configs/models/baseline_traditional.json",
+  "processed_root": "data/processed",
+  "results_root": "results",
+  "splits": {
+    "train": "train_small",
+    "validation": "valid_small",
+    "test": "test_unseen_100un"
+  },
+  "development_to_test_guards": {
+    "require_pair_disjoint": true,
+    "require_record_disjoint": true,
+    "require_entity_disjoint": true
+  },
+  "train_validation_guards": {
+    "require_pair_disjoint": true,
+    "require_record_disjoint": true,
+    "require_entity_disjoint": false,
+    "known_entity_overlap_allowed": true,
+    "known_entity_overlap_reason": "The official WDC train_small and valid_small splits have entity overlap. Validation may be used for threshold selection, but this run must not claim train-validation entity disjointness."
+  },
+  "threshold_selection": {
+    "split_role": "validation",
+    "selection_metric": "f1",
+    "candidate_thresholds": {
+      "start": 0.0,
+      "end": 1.0,
+      "step": 0.01
+    }
+  },
+  "final_test_policy": {
+    "test_split_role": "test",
+    "use_test_for_threshold_selection": false,
+    "use_test_for_model_selection": false,
+    "report_test_once_per_seed": true
+  },
+  "class_ratio_stress_test": {
+    "positive_label": 1,
+    "negative_label": 0,
+    "train_positive_policy": "use_all_available_positives",
+    "negative_per_positive_values": [1, 2, 3, 4],
+    "negative_sampling": {
+      "without_replacement": true,
+      "seeded_by": "experiment_seed",
+      "sampling_unit": "training_pair",
+      "write_sampled_tables_now": false
+    },
+    "fixed_evaluation_splits": ["validation", "test"]
+  },
+  "random_seeds": [13, 29, 47, 71, 101],
+  "models_to_run": ["logistic_regression", "random_forest", "svm"],
+  "fit_allowed": true,
+  "notes": "This approved run changes only the training class ratio. Validation and test remain fixed."
+}

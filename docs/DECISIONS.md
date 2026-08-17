@@ -463,3 +463,163 @@ Reasoning: F1 at one threshold is useful but incomplete for imbalanced entity ma
 Impact: Baseline comparisons should distinguish selected-threshold performance from threshold-free ranking performance. Test AP is for reporting only and must not be used to select thresholds or tune models.
 
 Evidence available at decision time: `python -m unittest tests.test_threshold_diagnostics` passed. `python scripts/export_threshold_diagnostics.py` wrote `reports/threshold_diagnostics.csv` and `reports/threshold_diagnostics.md`, ranking `random_forest` first by test Average Precision mean.
+
+## 2026-08-16: Plan class-ratio stress tests before running them
+
+Decision: Add a protocol-only class-ratio stress-test plan with training ratios `1:1`, `1:2`, `1:3`, and `1:4`, while keeping model fitting disabled.
+
+Alternatives considered:
+
+- Start training class-ratio experiments immediately.
+- Test only `1:1`, `1:2`, and `1:4`.
+- Change validation and test class ratios together with the training ratio.
+
+Reasoning: The available WDC `train_small` split has 500 matches and 2000 non-matches, so `1:1`, `1:2`, `1:3`, and `1:4` are all feasible without over-sampling or synthetic data. Keeping validation and test fixed isolates the effect of training class ratio from evaluation-set composition.
+
+Impact: Future class-ratio runs should use all 500 training matches and sample training non-matches without replacement according to the experiment seed. The test split remains `test_unseen_100un` and must not be used for threshold or model selection.
+
+Evidence available at decision time: `python -m unittest tests.test_class_ratio_plan` passed. `python scripts/export_class_ratio_plan.py` wrote `reports/class_ratio_plan.csv` and `reports/class_ratio_plan.md` with all four planned ratios, including `1:3`.
+
+## 2026-08-16: Add class-ratio training guard before execution
+
+Decision: Add a guarded class-ratio training entry point and readiness check while keeping the protocol config non-executable.
+
+Alternatives considered:
+
+- Implement and run the full class-ratio training loop immediately.
+- Rely on documentation alone to prevent accidental training.
+- Skip a class-ratio-specific guard and reuse only the baseline runner.
+
+Reasoning: Class-ratio experiments will introduce many more runs because they cross ratios, models, and seeds. A guard-specific readiness check makes it explicit when a config is still protocol-only and prevents accidental generation of sampled training tables or prediction files.
+
+Impact: `scripts/check_class_ratio_training_guard.py` can be used before any future class-ratio execution. The actual runner refuses the current protocol config via `TrainingNotAllowedError` because `fit_allowed` is `false`.
+
+Evidence available at decision time: `python -m unittest tests.test_class_ratio_training_guard` passed. `python scripts/check_class_ratio_training_guard.py --model logistic_regression` reported `ready_to_execute_training: false`, `training_attempted: false`, and `writes_files_now: false`.
+
+## 2026-08-16: Build class-ratio training matrices in memory first
+
+Decision: Implement class-ratio sampled training matrices as in-memory `ModelMatrix` objects before adding any fitting loop.
+
+Alternatives considered:
+
+- Write sampled training CSV files immediately.
+- Sample rows directly inside the future training loop.
+- Delay sampling tests until after the full class-ratio runner exists.
+
+Reasoning: The sampling logic is part of the experimental protocol and should be testable independently from model fitting. Returning a `ModelMatrix` preserves the existing training interface while avoiding generated sampled-data artifacts.
+
+Impact: Future class-ratio training can reuse `build_sampled_training_matrix` and pass its output into model fitting after explicit approval. The current milestone still writes no sampled tables and produces no predictions.
+
+Evidence available at decision time: `python -m unittest tests.test_class_ratio_plan` passed with tests for toy matrices, infeasible ratios, and the real WDC `1:3` sampled matrix.
+
+## 2026-08-16: Implement class-ratio runner behind approval guard
+
+Decision: Implement the class-ratio training runner code path, but keep it inaccessible to the current protocol-only config.
+
+Alternatives considered:
+
+- Wait to implement the runner until after approval.
+- Implement the runner and immediately create a fit-enabled config.
+- Use the baseline runner without ratio-specific output paths.
+
+Reasoning: The runner needs ratio-aware output paths, sampled training matrices, and ratio-level aggregation. Implementing that structure before running experiments makes the future approval step smaller and easier to audit. The training guard still prevents accidental execution.
+
+Impact: A future approved config can run class-ratio experiments using the existing raw prediction schema and ratio-specific result directories. Until such a config exists, `scripts/run_approved_class_ratio.py` refuses the current protocol config.
+
+Evidence available at decision time: `python -m unittest tests.test_class_ratio_training_guard tests.test_class_ratio_plan` passed. `python scripts/check_class_ratio_training_guard.py --model logistic_regression` still reported `ready_to_execute_training: false`, `training_attempted: false`, and `writes_files_now: false`.
+
+## 2026-08-16: Export a dry execution manifest before class-ratio runs
+
+Decision: Add a tracked class-ratio execution manifest that expands the planned ratio/model/seed grid before any training is approved.
+
+Alternatives considered:
+
+- Rely on the full JSON run-plan output only.
+- Wait until after training to document the executed grid.
+- Track only the compact ratio plan without model and seed rows.
+
+Reasoning: The class-ratio experiment is a larger grid than the initial baselines. A row-level manifest makes the future execution auditable before it happens: every ratio, model, seed, training size, evaluation split, and planned prediction path is visible.
+
+Impact: Future approved class-ratio runs should be checked against `reports/class_ratio_execution_manifest.csv` before execution. Any change to ratios, models, seeds, or output paths should update the manifest first.
+
+Evidence available at decision time: `python -m unittest tests.test_class_ratio_plan` passed. `python scripts/export_class_ratio_execution_manifest.py` wrote 60 planned task rows with `fit_allowed: false` and `writes_files_now: false`.
+
+## 2026-08-16: Run approved class-ratio stress test and audit it
+
+Decision: Execute the approved class-ratio stress-test run after creating a separate fit-enabled config.
+
+Alternatives considered:
+
+- Run only Logistic Regression first.
+- Delay training until a class-ratio audit tool existed.
+- Reuse the protocol-only config by flipping `fit_allowed` in place.
+
+Reasoning: The user explicitly approved real training. A separate fit-enabled config preserves the protocol-only file as a non-executable reference. Because the run produces many artifacts, a class-ratio-specific audit was added immediately after execution.
+
+Impact: The project now has an audited result grid for 4 training class ratios, 3 model families, and 5 seeds. Raw predictions and summaries remain under ignored `results/`, while compact result tables are exported under `reports/`.
+
+Evidence available at decision time: `python scripts/run_approved_class_ratio.py configs/experiments/wdc_class_ratio_stress_fit.json` completed 60 seed-level tasks. `python scripts/audit_class_ratio_results.py` reported `audit_status: passed`, `ratio_count: 4`, and `seed_audit_count: 60`.
+
+## 2026-08-16: Run a separate matched train/test class-ratio diagnostic
+
+Decision: Add and execute a separate fit-enabled config where the test class ratio is sampled to match the training class ratio for each ratio condition.
+
+Alternatives considered:
+
+- Modify the original fixed-test class-ratio experiment in place.
+- Treat the fixed-test result as if it also controlled test ratio.
+- Re-run only one model family under matched train/test ratios.
+
+Reasoning: The original class-ratio stress test intentionally controlled only the training ratio while keeping `test_unseen_100un` fixed. That protocol isolates the effect of training distribution under one stable unseen-entity evaluation distribution. The matched train/test variant answers a different diagnostic question: what happens when the evaluation class distribution changes together with training distribution. Keeping a separate config prevents these two interpretations from being mixed.
+
+Impact: Reports must distinguish fixed-test results from matched train/test results. The matched results can explain sensitivity to evaluation class imbalance, but they should not replace the fixed-test results for the main robustness claim.
+
+Evidence available at decision time: `python scripts/run_approved_class_ratio.py configs/experiments/wdc_class_ratio_matched_train_test_fit.json` completed 60 seed-level tasks. `python scripts/audit_class_ratio_results.py results/summaries/wdc_class_ratio_matched_train_test_fit_v1/aggregate.json` reported `audit_status: passed`, `ratio_count: 4`, and `seed_audit_count: 60`. The matched result table ranked Random Forest at `1:1` first with mean test F1 `0.782462373906762`.
+
+## 2026-08-17: Compare fixed-test and matched train/test protocols explicitly
+
+Decision: Add a dedicated protocol-comparison export instead of merging fixed-test and matched train/test class-ratio results into one leaderboard.
+
+Alternatives considered:
+
+- Rank all fixed and matched rows together by test F1.
+- Treat matched train/test results as a corrected replacement for fixed-test results.
+- Leave the distinction only in prose documentation.
+
+Reasoning: The two experiments change different variables. Fixed-test results change only the training ratio and keep the unseen test distribution stable. Matched train/test results also change the test distribution by sampling negatives. A row-aligned comparison makes the distribution difference visible and shows that the matched F1 increase mostly comes from precision changes, while recall remains unchanged because all positive test pairs are retained.
+
+Impact: Future reports should present fixed-test results as the main answer to the training-ratio research question, and matched train/test results as an evaluation-distribution diagnostic. The comparison artifacts should be regenerated with `scripts/export_class_ratio_protocol_comparison.py` whenever either source experiment changes.
+
+Evidence available at decision time: `python scripts/export_class_ratio_protocol_comparison.py` wrote 12 comparison rows. The largest F1 delta was Random Forest at `1:1`, with matched-minus-fixed mean F1 `0.23599641381912817`.
+
+## 2026-08-17: Plan a full train/test class-ratio grid before execution
+
+Decision: Add a protocol-only train/test ratio grid crossing train ratios `1:1`, `1:2`, `1:3`, and `1:4` with test ratios `1:1`, `1:2`, `1:3`, and `1:4`.
+
+Alternatives considered:
+
+- Continue evaluating only the diagonal matched train/test ratios.
+- Treat the fixed-test `1:8` test distribution as sufficient for all test-ratio questions.
+- Start the full grid training run immediately.
+
+Reasoning: The diagonal matched protocol cannot separate training-distribution effects from evaluation-distribution effects, because train and test ratios change together. A full grid allows comparisons across rows and columns: holding test ratio fixed isolates training-ratio effects, while holding train ratio fixed isolates test-ratio effects. The run is larger than previous experiments, so it should be planned and guarded before execution.
+
+Impact: The project now has a dry manifest for 240 planned test evaluations and 60 optimized model fits. The protocol remains non-executable until a separate fit-enabled config is created and the user explicitly approves real training.
+
+Evidence available at decision time: `python scripts/export_train_test_ratio_grid_manifest.py` wrote 240 dry manifest rows. `python scripts/check_train_test_ratio_grid_training_guard.py` reported `ready_to_execute_training: false`, `planned_fit_count: 60`, and `planned_test_evaluation_count: 240`.
+
+## 2026-08-17: Run the approved full train/test class-ratio grid
+
+Decision: Execute the full train/test ratio grid after creating a separate fit-enabled config.
+
+Alternatives considered:
+
+- Keep the grid as a protocol-only manifest.
+- Run only the Random Forest grid first.
+- Reuse the protocol-only config by changing `fit_allowed` in place.
+
+Reasoning: The user explicitly requested fit-enabled grid execution and real training. A separate fit-enabled config preserves the protocol-only file as a reference. The runner fits each train-ratio/model/seed combination once, then evaluates that fitted model across all test ratios. This keeps the scientific grid complete while avoiding redundant fitting.
+
+Impact: The project now has audited results for 4 train ratios, 4 test ratios, 3 model families, and 5 seeds. Raw predictions and detailed summaries remain under ignored `results/`; compact result reports are tracked under `reports/`.
+
+Evidence available at decision time: `python scripts/run_approved_train_test_ratio_grid.py configs/experiments/wdc_train_test_ratio_grid_fit.json` completed with `planned_fit_count: 60` and `seed_result_count: 240`. `python scripts/audit_train_test_ratio_grid_results.py` reported `audit_status: passed`, `seed_audit_count: 240`, and `cell_audit_count: 48`.

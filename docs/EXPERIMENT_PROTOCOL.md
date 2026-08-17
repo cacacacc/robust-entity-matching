@@ -102,6 +102,105 @@ First WDC unseen baseline protocol:
 - Train/validation rule: require pair and record disjointness; acknowledge known entity overlap and do not claim train-validation entity disjointness.
 - Development/test rule: require pair, record, and entity disjointness for `train_small` versus `test_unseen_100un` and for `valid_small` versus `test_unseen_100un`.
 
+Class-ratio stress-test protocol:
+
+- Config: `configs/experiments/wdc_class_ratio_stress_protocol.json`.
+- Status: `protocol_locked_no_fit`.
+- Purpose: test how changing the training match/non-match ratio affects model behavior.
+- Training positives: use all 500 available match pairs from `train_small`.
+- Training negatives: sample non-match pairs without replacement using the experiment seed.
+- Planned training ratios:
+  - `1:1`: 500 match, 500 non-match, 1000 total training rows;
+  - `1:2`: 500 match, 1000 non-match, 1500 total training rows;
+  - `1:3`: 500 match, 1500 non-match, 2000 total training rows;
+  - `1:4`: 500 match, 2000 non-match, 2500 total training rows.
+- Fixed evaluation splits:
+  - validation remains `valid_small`;
+  - test remains `test_unseen_100un`.
+- The preview step writes no sampled training tables and performs no model fitting.
+
+Class-ratio plan reports:
+
+- `reports/class_ratio_plan.csv`
+- `reports/class_ratio_plan.md`
+- `reports/class_ratio_execution_manifest.csv`
+- `reports/class_ratio_execution_manifest.md`
+
+Class-ratio training guard:
+
+- Script: `scripts/check_class_ratio_training_guard.py`.
+- Future approved runner script: `scripts/run_approved_class_ratio.py`.
+- Current status: blocked by `TrainingNotAllowedError`.
+- Current config has `fit_allowed: false`.
+- Current readiness check reports `training_attempted: false` and `writes_files_now: false`.
+- A future fit-enabled class-ratio config requires explicit user approval before training.
+- The approved runner code path is implemented, but no fit-enabled class-ratio config exists yet.
+
+Class-ratio sampled matrix construction:
+
+- Function: `build_sampled_training_matrix`.
+- Location: `src/entity_matching/experiments/class_ratio_plan.py`.
+- Input: validated `train_small` `ModelMatrix`, `negatives_per_positive`, and `seed`.
+- Output: an in-memory `ModelMatrix` with all training matches and a seeded without-replacement sample of training non-matches.
+- The sampled matrix preserves feature column order and row-aligned `pair_ids`, `X`, and `y`.
+- The sampled matrix is not written to disk in the current protocol-only milestone.
+
+Class-ratio execution output plan after future approval:
+
+- Raw predictions: `results/predictions/<experiment_id>/<ratio_id>/<model_id>/seed_<seed>/<split_role>.csv`.
+- Per-seed summaries: `results/summaries/<experiment_id>/<ratio_id>/<model_id>/seed_<seed>.json`.
+- Aggregate summary: `results/summaries/<experiment_id>/aggregate.json`.
+- No saved model pickle/joblib artifacts are planned.
+
+Current dry execution manifest:
+
+- Total planned tasks: 60.
+- Dimensions: 4 class ratios, 3 models, 5 seeds.
+- Current fit state: `fit_allowed: false`.
+- Current write state: `writes_files_now: false`.
+
+Approved class-ratio result configs:
+
+- Fixed-test config: `configs/experiments/wdc_class_ratio_stress_fit.json`.
+- Fixed-test status: completed and audited in `docs/PHASE_3_CLASS_RATIO_AUDIT.md`.
+- Matched train/test config: `configs/experiments/wdc_class_ratio_matched_train_test_fit.json`.
+- Matched train/test status: completed and audited in `docs/PHASE_3_MATCHED_CLASS_RATIO_AUDIT.md`.
+- Protocol comparison: `docs/PHASE_3_CLASS_RATIO_PROTOCOL_COMPARISON.md`.
+- Protocol comparison artifacts: `reports/class_ratio_protocol_comparison.csv` and `reports/class_ratio_protocol_comparison.md`.
+
+Matched train/test class-ratio protocol:
+
+- Training ratios remain `1:1`, `1:2`, `1:3`, and `1:4`.
+- Validation remains fixed as `valid_small` for threshold selection.
+- Test positives use all 500 positive pairs from `test_unseen_100un`.
+- Test negatives are sampled without replacement from `test_unseen_100un` using the experiment seed.
+- Each test matrix therefore matches its corresponding training ratio.
+- This protocol is a diagnostic for changing evaluation class distribution, not a replacement for the fixed-test protocol.
+
+Current class-ratio interpretation rule:
+
+- Use the fixed-test protocol to answer the main question: how does training class ratio affect performance on the same unseen-entity test distribution?
+- Use the matched train/test protocol to answer the diagnostic question: how sensitive are precision and F1 to the evaluation class distribution?
+- Do not merge fixed-test and matched train/test results into one model-selection leaderboard.
+
+Full train/test ratio grid protocol:
+
+- Config: `configs/experiments/wdc_train_test_ratio_grid_protocol.json`.
+- Fit config: `configs/experiments/wdc_train_test_ratio_grid_fit.json`.
+- Status: completed and audited.
+- Train ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Test ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Seeds: `13`, `29`, `47`, `71`, `101`.
+- Optimized model fits: `60`.
+- Test evaluations: `240`.
+- Validation remains fixed as `valid_small`.
+- Test negatives are sampled without replacement from `test_unseen_100un` using the experiment seed.
+- Plan document: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_PLAN.md`.
+- Audit document: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_AUDIT.md`.
+- Dry manifest: `reports/train_test_ratio_grid_manifest.csv` and `reports/train_test_ratio_grid_manifest.md`.
+- Result artifacts: `reports/train_test_ratio_grid_results.csv` and `reports/train_test_ratio_grid_results.md`.
+
 ## Random Seeds
 
 Initial locked seed schedule for the first WDC unseen baseline protocol:
@@ -113,6 +212,8 @@ Initial locked seed schedule for the first WDC unseen baseline protocol:
 - `101`
 
 These seeds apply to model initialization and sampling decisions once fitting is explicitly enabled.
+
+For the class-ratio stress test, the same seeds also define the negative-pair subsampling for ratios `1:1`, `1:2`, and `1:3`. Ratio `1:4` uses all available training negatives, so its sampled training set is identical across seeds except for model initialization.
 
 ## Features
 
@@ -303,6 +404,43 @@ Approved remaining baseline config:
 - Status: completed.
 - Result log: `docs/RESULTS_LOG.md`.
 - Result audit: `docs/PHASE_3_RF_SVM_AUDIT.md`.
+
+Approved class-ratio stress-test config:
+
+- `configs/experiments/wdc_class_ratio_stress_fit.json`
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Status: completed.
+- Result log: `docs/RESULTS_LOG.md`.
+- Result audit: `docs/PHASE_3_CLASS_RATIO_AUDIT.md`.
+
+Approved matched train/test class-ratio config:
+
+- `configs/experiments/wdc_class_ratio_matched_train_test_fit.json`
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Status: completed.
+- Result log: `docs/RESULTS_LOG.md`.
+- Result audit: `docs/PHASE_3_MATCHED_CLASS_RATIO_AUDIT.md`.
+
+Protocol-only train/test ratio grid config:
+
+- `configs/experiments/wdc_train_test_ratio_grid_protocol.json`
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Train ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Test ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Status: protocol locked reference.
+- Plan document: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_PLAN.md`.
+
+Approved train/test ratio grid config:
+
+- `configs/experiments/wdc_train_test_ratio_grid_fit.json`
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Train ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Test ratios: `1:1`, `1:2`, `1:3`, `1:4`.
+- Status: completed.
+- Result log: `docs/RESULTS_LOG.md`.
+- Result audit: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_AUDIT.md`.
 
 Current training guard:
 
