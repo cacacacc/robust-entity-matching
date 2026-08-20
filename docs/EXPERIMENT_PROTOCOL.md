@@ -102,6 +102,19 @@ First WDC unseen baseline protocol:
 - Train/validation rule: require pair and record disjointness; acknowledge known entity overlap and do not claim train-validation entity disjointness.
 - Development/test rule: require pair, record, and entity disjointness for `train_small` versus `test_unseen_100un` and for `valid_small` versus `test_unseen_100un`.
 
+Seen-vs-unseen baseline comparison:
+
+- Seen config: `configs/experiments/wdc_seen_baseline_fit.json`.
+- Seen status: completed and audited in `docs/PHASE_3_SEEN_VS_UNSEEN_AUDIT.md`.
+- Unseen reference configs: `configs/experiments/wdc_unseen_logistic_regression_fit.json` and `configs/experiments/wdc_unseen_rf_svm_fit.json`.
+- Seen test split: `test_seen_000un`.
+- Unseen test split: `test_unseen_100un`.
+- Both test splits have 500 matches and 4000 non-matches.
+- Seen split local guard note: `train_small` has 0 pair and record overlap with `test_seen_000un`, but 500 entity overlap.
+- Seen validation overlap note: `valid_small` has 0 pair overlap, 4 record overlap, and 500 entity overlap with `test_seen_000un`.
+- Interpretation rule: seen test is an official diagnostic split, while unseen test remains the entity-disjoint robustness split.
+- Comparison artifacts: `reports/seen_vs_unseen_comparison.csv` and `reports/seen_vs_unseen_comparison.md`.
+
 Class-ratio stress-test protocol:
 
 - Config: `configs/experiments/wdc_class_ratio_stress_protocol.json`.
@@ -198,8 +211,10 @@ Full train/test ratio grid protocol:
 - Test negatives are sampled without replacement from `test_unseen_100un` using the experiment seed.
 - Plan document: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_PLAN.md`.
 - Audit document: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_AUDIT.md`.
+- Analysis document: `docs/PHASE_3_TRAIN_TEST_RATIO_GRID_ANALYSIS.md`.
 - Dry manifest: `reports/train_test_ratio_grid_manifest.csv` and `reports/train_test_ratio_grid_manifest.md`.
 - Result artifacts: `reports/train_test_ratio_grid_results.csv` and `reports/train_test_ratio_grid_results.md`.
+- Derived analysis artifacts: `reports/train_test_ratio_grid_f1_matrix.csv`, `reports/train_test_ratio_grid_best_train_by_test_ratio.csv`, `reports/train_test_ratio_grid_test_sensitivity.csv`, and `reports/train_test_ratio_grid_analysis.md`.
 
 ## Random Seeds
 
@@ -404,6 +419,15 @@ Approved remaining baseline config:
 - Status: completed.
 - Result log: `docs/RESULTS_LOG.md`.
 - Result audit: `docs/PHASE_3_RF_SVM_AUDIT.md`.
+
+Approved seen baseline config:
+
+- `configs/experiments/wdc_seen_baseline_fit.json`
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Test split: `test_seen_000un`.
+- Status: completed.
+- Result log: `docs/RESULTS_LOG.md`.
+- Result audit: `docs/PHASE_3_SEEN_VS_UNSEEN_AUDIT.md`.
 
 Approved class-ratio stress-test config:
 

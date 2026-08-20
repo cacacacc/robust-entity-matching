@@ -126,7 +126,9 @@ def validate_training_config(config: Mapping[str, Any]) -> None:
 def run_approved_baseline_training(config_path: str | Path) -> dict[str, Any]:
     """Run approved baseline training, prediction, thresholding, and summaries."""
 
-    config = load_training_config(config_path)
+    resolved_config_path = Path(config_path)
+    config = load_training_config(resolved_config_path)
+    config["executed_config_path"] = str(resolved_config_path)
     _validate_training_guards(config)
     model_config = load_model_config(config["model_config"])
     matrices = _load_protocol_matrices(config)
@@ -378,7 +380,9 @@ def _aggregate_results(
     return {
         "experiment_id": config["experiment_id"],
         "status": "completed",
-        "source_config": config.get("source_protocol_config"),
+        "source_config": config.get("executed_config_path")
+        or config.get("source_protocol_config"),
+        "source_protocol_config": config.get("source_protocol_config"),
         "models": {
             model_id: _aggregate_model_results(results)
             for model_id, results in sorted(by_model.items())

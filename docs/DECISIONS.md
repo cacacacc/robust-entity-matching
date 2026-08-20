@@ -623,3 +623,19 @@ Reasoning: The user explicitly requested fit-enabled grid execution and real tra
 Impact: The project now has audited results for 4 train ratios, 4 test ratios, 3 model families, and 5 seeds. Raw predictions and detailed summaries remain under ignored `results/`; compact result reports are tracked under `reports/`.
 
 Evidence available at decision time: `python scripts/run_approved_train_test_ratio_grid.py configs/experiments/wdc_train_test_ratio_grid_fit.json` completed with `planned_fit_count: 60` and `seed_result_count: 240`. `python scripts/audit_train_test_ratio_grid_results.py` reported `audit_status: passed`, `seed_audit_count: 240`, and `cell_audit_count: 48`.
+
+## 2026-08-20: Run and report the WDC seen-vs-unseen diagnostic
+
+Decision: Run the traditional baselines on the official WDC seen test split and compare them against the already audited unseen baselines.
+
+Alternatives considered:
+
+- Skip seen testing and keep only unseen robustness results.
+- Assume unseen must be harder without running the seen split.
+- Hide the seen result because it is lower than the unseen result.
+
+Reasoning: The research question concerns unseen-entity shift, so the project needs an empirical seen-vs-unseen diagnostic. Scientific integrity requires reporting the observed result even when it is counterintuitive. The seen split has known development overlap, so it should be framed as an official diagnostic rather than a leakage-free final test.
+
+Impact: The final report can now state that, under the current WDC 80pair feature/model setup, the unseen split scored higher than the seen split for all three traditional baselines. This result should motivate deeper split-composition or hard-negative analysis rather than a simplistic unseen-harder claim.
+
+Evidence available at decision time: `python scripts/run_approved_baseline.py configs/experiments/wdc_seen_baseline_fit.json` completed 15 seed-level runs. `python scripts/audit_baseline_results.py results/summaries/wdc_seen_baseline_fit_v1/aggregate.json` passed. `python scripts/export_seen_unseen_comparison.py` wrote 3 comparison rows; Random Forest had unseen-minus-seen mean F1 `0.05827442237845326`.

@@ -54,6 +54,10 @@ Execution scale:
 - Raw predictions: `results/predictions/wdc_train_test_ratio_grid_fit_v1/<train_ratio_id>/<test_ratio_id>/<model_id>/seed_<seed>/`
 - Result CSV: `reports/train_test_ratio_grid_results.csv`
 - Result Markdown: `reports/train_test_ratio_grid_results.md`
+- Derived F1 matrix: `reports/train_test_ratio_grid_f1_matrix.csv`
+- Derived best-train table: `reports/train_test_ratio_grid_best_train_by_test_ratio.csv`
+- Derived sensitivity table: `reports/train_test_ratio_grid_test_sensitivity.csv`
+- Derived analysis report: `reports/train_test_ratio_grid_analysis.md`
 
 Artifact counts:
 

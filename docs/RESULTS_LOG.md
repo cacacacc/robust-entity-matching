@@ -551,3 +551,158 @@ Interpretation:
 - Random Forest remains the strongest model family in the top cells.
 - Within fixed test ratio `1:1`, Random Forest changes only slightly across train ratios, with `1:1` first and `1:2` very close.
 - This grid is diagnostic for train/test distribution effects. The fixed-test `1:8` run remains the main evidence for the original WDC unseen test distribution.
+
+## 2026-08-17: Train/Test Ratio Grid Derived Analysis
+
+Analysis artifacts:
+
+- `reports/train_test_ratio_grid_f1_matrix.csv`
+- `reports/train_test_ratio_grid_best_train_by_test_ratio.csv`
+- `reports/train_test_ratio_grid_test_sensitivity.csv`
+- `reports/train_test_ratio_grid_analysis.md`
+
+Export command:
+
+```powershell
+python scripts/export_train_test_ratio_grid_analysis.py
+```
+
+Purpose:
+
+- Hold test ratio fixed to compare train-ratio effects.
+- Hold train ratio fixed to compare test-ratio effects.
+- Convert the 48-row grid leaderboard into analysis tables that support research interpretation.
+
+Key findings:
+
+- Best-train gaps under a fixed test ratio are small, often below `0.005` F1.
+- Test-ratio effects are much larger: moving from test `1:1` to test `1:4` drops F1 by roughly `0.11` to `0.12` for many settings.
+- The F1 drop is driven by precision drop; recall drop is `0.0` because every sampled test ratio keeps all positive test pairs.
+
+Interpretation:
+
+- Training class ratio matters, but the current grid shows weaker effects than evaluation class ratio.
+- The grid is strongest as evidence that class-ratio reporting must include the evaluation ratio.
+- The final report should not claim a universal best training ratio from this grid alone.
+
+## 2026-08-20: Seen vs Unseen Baseline Comparison
+
+Seen experiment config:
+
+- `configs/experiments/wdc_seen_baseline_fit.json`
+
+Unseen reference summaries:
+
+- `results/summaries/wdc_unseen_logistic_regression_fit_v1/aggregate.json`
+- `results/summaries/wdc_unseen_rf_svm_fit_v1/aggregate.json`
+
+Comparison artifacts:
+
+- `reports/seen_vs_unseen_comparison.csv`
+- `reports/seen_vs_unseen_comparison.md`
+
+Export command:
+
+```powershell
+python scripts/export_seen_unseen_comparison.py
+```
+
+Protocol:
+
+- Train split: `train_small`.
+- Validation split: `valid_small`.
+- Seen test split: `test_seen_000un`.
+- Unseen test split: `test_unseen_100un`.
+- Models: `logistic_regression`, `random_forest`, `svm`.
+- Seeds: `13`, `29`, `47`, `71`, `101`.
+- Threshold selection: F1 on fixed validation only.
+
+Split notes:
+
+- `train_small` vs `test_seen_000un`: 0 pair overlap, 0 record overlap, 500 entity overlap.
+- `valid_small` vs `test_seen_000un`: 0 pair overlap, 4 record overlap, 500 entity overlap.
+- Seen test is an official diagnostic split, not a leakage-free final evaluation.
+
+Audit status:
+
+- Seen result audit passed on 2026-08-20.
+- Audit document: `docs/PHASE_3_SEEN_VS_UNSEEN_AUDIT.md`.
+- Audit command: `python scripts/audit_baseline_results.py results/summaries/wdc_seen_baseline_fit_v1/aggregate.json`.
+
+Comparison:
+
+| Model | Seen F1 | Unseen F1 | Unseen - Seen F1 | Seen Precision | Unseen Precision | Seen Recall | Unseen Recall |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `random_forest` | `0.501588765037883` | `0.5598631874163362` | `0.05827442237845326` | `0.40099776227906103` | `0.46980980732376343` | `0.6724` | `0.6952` |
+| `logistic_regression` | `0.48769230769230765` | `0.5358615004122012` | `0.048169192719893505` | `0.39625` | `0.45582047685834504` | `0.634` | `0.65` |
+| `svm` | `0.48292754986528125` | `0.5295473051367368` | `0.04661975527145551` | `0.38424599865908854` | `0.43678721061618153` | `0.65` | `0.6724` |
+
+Interpretation:
+
+- In this audited run, unseen test scores are higher than seen test scores for all three traditional baselines.
+- This should be reported as an empirical WDC split finding, not forced into an unseen-harder assumption.
+- The unseen split remains the main entity-disjoint robustness split; the seen split is useful as an official diagnostic with known overlap caveats.
+
+## 2026-08-20: Seen/Unseen Split Difficulty Analysis
+
+Purpose:
+
+- Explain why `test_seen_000un` scored lower than `test_unseen_100un`.
+- Use existing raw predictions and processed feature tables only.
+- Do not retrain models and do not use test data for model selection.
+
+Command:
+
+```powershell
+python scripts/export_seen_unseen_difficulty_analysis.py
+```
+
+Artifacts:
+
+- `reports/seen_unseen_split_difficulty.csv`
+- `reports/seen_unseen_feature_difficulty.csv`
+- `reports/seen_unseen_difficulty_analysis.md`
+- `docs/PHASE_3_SEEN_UNSEEN_DIFFICULTY_ANALYSIS.md`
+
+Inspected run:
+
+- Model: `random_forest`
+- Seed: `13`
+- Seen prediction: `results/predictions/wdc_seen_baseline_fit_v1/random_forest/seed_13/test.csv`
+- Unseen prediction: `results/predictions/wdc_unseen_rf_svm_fit_v1/random_forest/seed_13/test.csv`
+
+Key descriptive findings:
+
+| Split | Positives | Negatives | Hard Negatives | TP | FP | TN | FN | Precision | Recall | F1 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| `test_seen_000un` | `500` | `4000` | `3000` | `350` | `589` | `3411` | `150` | `0.372737` | `0.700000` | `0.486449` |
+| `test_unseen_100un` | `500` | `4000` | `3000` | `369` | `454` | `3546` | `131` | `0.448360` | `0.738000` | `0.557823` |
+
+Interpretation:
+
+- The two test splits have identical label counts and hard-negative totals.
+- The seen split produces more false positives and slightly more false negatives under the inspected RF seed.
+- Feature summaries show that seen negatives have higher numeric overlap than unseen negatives, while seen positives have lower title/combined textual similarity than unseen positives.
+- Therefore, the lower seen F1 appears to be a split-composition/error-profile effect, not evidence that entity-seen tests are inherently harder or easier.
+
+All-seed stability extension:
+
+- Script: `python scripts/export_seen_unseen_error_profile.py`
+- Seed-level output: `reports/seen_unseen_error_profile_by_seed.csv`
+- Model-level output: `reports/seen_unseen_error_profile_by_model.csv`
+- Markdown output: `reports/seen_unseen_error_profile.md`
+
+Model-level summary:
+
+| Model | Seeds | Seen FP Mean | Unseen FP Mean | Seen-Unseen FP Mean | Seeds Seen FP Higher | Unseen-Seen Precision Mean | Unseen-Seen F1 Mean | Seeds Unseen F1 Higher |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| `logistic_regression` | `5` | `483.000000` | `388.000000` | `95.000000` | `5` | `0.059570` | `0.048169` | `5` |
+| `random_forest` | `5` | `505.600000` | `394.400000` | `111.200000` | `5` | `0.068812` | `0.058274` | `5` |
+| `svm` | `5` | `521.000000` | `433.600000` | `87.400000` | `5` | `0.052541` | `0.046620` | `5` |
+
+Updated interpretation:
+
+- The seen-lower pattern is stable across all inspected model-seed rows.
+- All `15/15` rows have more false positives on seen than unseen.
+- All `15/15` rows have higher F1 on unseen than seen.
+- This strengthens the descriptive claim that the seen diagnostic split is harder for these baselines under the current validation-selected thresholds.
