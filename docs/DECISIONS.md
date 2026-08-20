@@ -639,3 +639,37 @@ Reasoning: The research question concerns unseen-entity shift, so the project ne
 Impact: The final report can now state that, under the current WDC 80pair feature/model setup, the unseen split scored higher than the seen split for all three traditional baselines. This result should motivate deeper split-composition or hard-negative analysis rather than a simplistic unseen-harder claim.
 
 Evidence available at decision time: `python scripts/run_approved_baseline.py configs/experiments/wdc_seen_baseline_fit.json` completed 15 seed-level runs. `python scripts/audit_baseline_results.py results/summaries/wdc_seen_baseline_fit_v1/aggregate.json` passed. `python scripts/export_seen_unseen_comparison.py` wrote 3 comparison rows; Random Forest had unseen-minus-seen mean F1 `0.05827442237845326`.
+
+## 2026-08-20: Separate final result claims by protocol scope
+
+Decision: Summarize Phase 3 results as a structured narrative instead of merging all experiments into one leaderboard.
+
+Alternatives considered:
+
+- Rank every observed result by F1 regardless of protocol.
+- Treat matched train/test class-ratio results as the main baseline result because they have higher F1.
+- Present the seen/unseen diagnostic as if it were a leakage-free final evaluation.
+
+Reasoning: The completed experiments answer different questions. Fixed unseen baselines measure traditional model performance under the main entity-disjoint test split. Fixed-test class-ratio experiments isolate training-ratio effects. Matched and full train/test-ratio grids diagnose evaluation-distribution sensitivity. Seen results are official diagnostics with overlap caveats. Combining these into one leaderboard would make the highest F1 values look more important than the protocol conditions that produced them.
+
+Impact: Final writing should keep claims scoped to their protocol. The main robustness result should use `test_unseen_100un`; class-ratio and seen/unseen experiments should be presented as diagnostics that explain sensitivity and split composition.
+
+Evidence available at decision time: `docs/PHASE_3_RESULTS_SYNTHESIS.md` and `reports/final_results_narrative.md` summarize the completed baseline, class-ratio, train/test-ratio, and seen/unseen results. All-seed seen/unseen error profile rows show `15/15` model-seed rows with higher unseen F1 and more seen false positives.
+
+## 2026-08-20: End the traditional-baseline research MVP
+
+Decision: Stop experimental work and mark the traditional-baseline research MVP complete.
+
+Alternatives considered:
+
+- Add Transformer or large-model baselines.
+- Add another product-matching dataset.
+- Run a new hard-negative-sampling intervention.
+- Generate more class-ratio grids.
+- Continue optimizing model performance before writing.
+
+Reasoning: The project already has enough evidence to support a coherent undergraduate research contribution: audited data ingestion, split guards, traditional baselines, validation-only threshold selection, fixed unseen evaluation, class-ratio experiments, seen/unseen diagnostics, error analysis, tests, and result synthesis. Additional experiments would expand the scope rather than close the current research question cleanly.
+
+Impact: The next mode should be writing and presentation. Any future modeling work should be treated as a new phase with explicit approval and updated research questions.
+
+Evidence available at decision time: `docs/PROJECT_COMPLETION_AUDIT.md` records the completion assessment. Full test suite passed with `python -m unittest discover tests` reporting `Ran 115 tests` and `OK`.

@@ -216,6 +216,13 @@ Full train/test ratio grid protocol:
 - Result artifacts: `reports/train_test_ratio_grid_results.csv` and `reports/train_test_ratio_grid_results.md`.
 - Derived analysis artifacts: `reports/train_test_ratio_grid_f1_matrix.csv`, `reports/train_test_ratio_grid_best_train_by_test_ratio.csv`, `reports/train_test_ratio_grid_test_sensitivity.csv`, and `reports/train_test_ratio_grid_analysis.md`.
 
+Phase 3 synthesis artifacts:
+
+- Chinese synthesis: `docs/PHASE_3_RESULTS_SYNTHESIS.md`.
+- Report-ready English narrative draft: `reports/final_results_narrative.md`.
+- Completion audit: `docs/PROJECT_COMPLETION_AUDIT.md`.
+- Purpose: combine baseline, class-ratio, train/test-ratio, and seen/unseen results into a single interpretation without changing the locked experimental protocol.
+
 ## Random Seeds
 
 Initial locked seed schedule for the first WDC unseen baseline protocol:

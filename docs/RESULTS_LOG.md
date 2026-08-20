@@ -706,3 +706,42 @@ Updated interpretation:
 - All `15/15` rows have more false positives on seen than unseen.
 - All `15/15` rows have higher F1 on unseen than seen.
 - This strengthens the descriptive claim that the seen diagnostic split is harder for these baselines under the current validation-selected thresholds.
+
+## 2026-08-20: Phase 3 Results Synthesis
+
+Purpose:
+
+- Combine completed Phase 3 results into a coherent report narrative.
+- Keep baseline, class-ratio, train/test-ratio, and seen/unseen findings separated by interpretation scope.
+- Do not run new training or change the locked protocol.
+
+Artifacts:
+
+- `docs/PHASE_3_RESULTS_SYNTHESIS.md`
+- `reports/final_results_narrative.md`
+
+Main synthesized claims:
+
+- Random Forest is the strongest current traditional baseline under fixed unseen-entity evaluation.
+- Training class ratio has measurable but limited effects when the unseen test distribution is fixed.
+- Evaluation class ratio has a strong effect on F1 and precision.
+- The official seen diagnostic split scores lower than the unseen split because it produces more false positives across all inspected model-seed rows.
+- Final reporting must include class ratios, split construction, threshold-selection protocol, seeds, and leakage/entity-overlap caveats.
+
+## 2026-08-20: Project Completion Audit
+
+Purpose:
+
+- Decide whether the traditional-baseline research MVP can end.
+- Separate required completion items from optional presentation polish.
+- Prevent unnecessary scope expansion before writing.
+
+Artifact:
+
+- `docs/PROJECT_COMPLETION_AUDIT.md`
+
+Decision:
+
+- The traditional-baseline research MVP is complete.
+- No additional model training is required to finish the MVP.
+- Future work should focus on writing, figures, Git cleanup, and interview presentation unless a new phase is explicitly opened.
